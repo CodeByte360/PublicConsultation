@@ -17,7 +17,8 @@
                 @bind-Value="model.MinistryOrDepartment" />
             <MudTextField T="string" Label="Description" Lines="3" @bind-Value="model.Description" />
 
-            <MudDateRangePicker Label="Consultation Period" @bind-DateRange="_dateRange" Required="true" />
+            <MudDateRangePicker Label="Consultation Period" @bind-DateRange="_dateRange" Required="true"
+                PickerVariant="PickerVariant.Dialog" HelperText="Select the start and end date for public feedback" />
 
             <MudFileUpload T="IBrowserFile" OnFilesChanged="UploadFile" Class="mt-4">
                 <ActivatorContent>

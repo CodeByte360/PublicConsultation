@@ -1,10 +1,87 @@
+#nullable enable
 using PublicConsultation.Core.Entities;
 using PublicConsultation.Core.Interfaces;
+using Microsoft.ML;
+using Microsoft.ML.Data;
 
 namespace PublicConsultation.Infrastructure.Services;
 
 public class AiAnalysisService : IAiAnalysisService
 {
+    private static MLContext _mlContext = new MLContext();
+    private static ITransformer? _model;
+    private static PredictionEngine<SentimentData, SentimentPrediction>? _predictionEngine;
+
+    public AiAnalysisService()
+    {
+        InitializeModel();
+    }
+
+    private void InitializeModel()
+    {
+        if (_model != null) return;
+
+        lock (_mlContext)
+        {
+            if (_model != null) return;
+
+            // 1. Prepare Training Data (Balanced and more comprehensive)
+            var trainingData = new List<SentimentData>
+            {
+                // Positive
+                new() { Text = "wonderful", Label = true },
+                new() { Text = "nice", Label = true },
+                new() { Text = "good", Label = true },
+                new() { Text = "great", Label = true },
+                new() { Text = "excellent", Label = true },
+                new() { Text = "support", Label = true },
+                new() { Text = "I love this", Label = true },
+                new() { Text = "Perfect solution", Label = true },
+                new() { Text = "Very helpful", Label = true },
+                new() { Text = "This is a great proposal, I support it.", Label = true },
+                new() { Text = "Excellent work on the digital safety aspects.", Label = true },
+                new() { Text = "I really like this new rule.", Label = true },
+                new() { Text = "This will benefit the public greatly.", Label = true },
+                new() { Text = "I support the ministry's decision.", Label = true },
+                new() { Text = "It's okay but could be clearer.", Label = true },
+                new() { Text = "This is fine.", Label = true },
+                new() { Text = "Good job.", Label = true },
+                new() { Text = "Absolutely support.", Label = true },
+
+                // Negative
+                new() { Text = "bad", Label = false },
+                new() { Text = "worst", Label = false },
+                new() { Text = "terrible", Label = false },
+                new() { Text = "horrible", Label = false },
+                new() { Text = "dislike", Label = false },
+                new() { Text = "hate", Label = false },
+                new() { Text = "reject", Label = false },
+                new() { Text = "wrong", Label = false },
+                new() { Text = "This is bad and will cause harm.", Label = false },
+                new() { Text = "I strongly oppose this heavy penalty.", Label = false },
+                new() { Text = "The prison sentence is too long.", Label = false },
+                new() { Text = "This violates freedom of speech.", Label = false },
+                new() { Text = "I reject this proposal completely.", Label = false },
+                new() { Text = "I disagree with section 5.", Label = false },
+                new() { Text = "Too expensive.", Label = false },
+                new() { Text = "Not fair.", Label = false },
+                new() { Text = "Poorly written.", Label = false },
+                new() { Text = "I hate this rule.", Label = false },
+                new() { Text = "This is a disaster.", Label = false }
+            };
+
+            var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
+
+            // 2. Define ML Pipeline
+            var pipeline = _mlContext.Transforms.Text.FeaturizeText("Features", nameof(SentimentData.Text))
+                .Append(_mlContext.BinaryClassification.Trainers.SdcaLogisticRegression(labelColumnName: "Label", featureColumnName: "Features"));
+
+            // 3. Train Model
+            _model = pipeline.Fit(dataView);
+            _predictionEngine = _mlContext.Model.CreatePredictionEngine<SentimentData, SentimentPrediction>(_model);
+        }
+    }
+
     public async Task<AnalysisResultDto> AnalyzeBatchAsync(List<Opinion> opinions)
     {
         if (opinions == null || !opinions.Any())
@@ -17,92 +94,84 @@ public class AiAnalysisService : IAiAnalysisService
             };
         }
 
+        var results = opinions.Select(o => PredictSentiment(o.OpinionText)).ToList();
+
+        // Count results
+        int positive = results.Count(r => r == "Positive");
+        int negative = results.Count(r => r == "Negative");
+
+        string finalSentiment = "Neutral";
+        if (positive > negative * 1.5) finalSentiment = "Positive";
+        else if (negative > positive * 1.5) finalSentiment = "Negative";
+        else if (positive > 0 && negative > 0) finalSentiment = "Mixed";
+
+        // Heuristic based Themes and Recommendation
         var text = string.Join(" ", opinions.Select(o => o.OpinionText.ToLower()));
-        var suggestions = string.Join(" ", opinions.Select(o => o.Suggestion?.ToLower() ?? ""));
-
-        // 1. Sentiment Analysis
-        int positiveScore = CountKeywords(text, new[] { "good", "support", "excellent", "agree", "benefit", "better", "welcome" });
-        int negativeScore = CountKeywords(text, new[] { "bad", "wrong", "oppose", "disagree", "harm", "worse", "reject", "penalty", "heavy" });
-        int concernScore = CountKeywords(text, new[] { "concern", "clarify", "unclear", "missing", "vague", "ambiguous", "define" });
-
-        string sentiment = "Neutral";
-        if (positiveScore > negativeScore && positiveScore > concernScore) sentiment = "Positive";
-        else if (negativeScore > positiveScore && negativeScore > concernScore) sentiment = "Negative";
-        else if (concernScore > positiveScore || (negativeScore > 0 && positiveScore > 0)) sentiment = "Mixed";
-
-        // 2. Theme Detection
-        var themes = new List<string>();
-        if (CountKeywords(text + suggestions, new[] { "privacy", "data", "confidential" }) > 0) themes.Add("Privacy Concerns");
-        if (CountKeywords(text + suggestions, new[] { "penalty", "fine", "prison", "jail", "sentence" }) > 0) themes.Add("Punishment Severity");
-        if (CountKeywords(text + suggestions, new[] { "freedom", "speech", "expression", "press" }) > 0) themes.Add("Freedom of Expression");
-        if (CountKeywords(text + suggestions, new[] { "definition", "meaning", "define", "scope" }) > 0) themes.Add("Definitional Clarity");
-
-        // 3. Recommendation
-        string recommendation = "Maintain proposed provision.";
-        if (sentiment == "Negative") recommendation = "Significant revision required. Consider softening penalties and increasing oversight.";
-        else if (sentiment == "Mixed") recommendation = "Clarification needed. Re-define ambiguous terms based on public feedback.";
-        else if (sentiment == "Positive" && themes.Any()) recommendation = "Proceed with proposal, but consider minor tweaks to " + themes.First().ToLower() + ".";
-
-        // 4. Summary
-        string summary = await SummarizeOpinionsAsync(opinions);
+        var themes = DetectThemes(text);
 
         return new AnalysisResultDto
         {
-            Summary = summary,
-            Sentiment = sentiment,
+            Summary = await SummarizeOpinionsAsync(opinions),
+            Sentiment = finalSentiment,
             KeyThemes = themes,
-            Recommendation = recommendation
+            Recommendation = GenerateRecommendation(finalSentiment, themes)
         };
     }
 
-    private int CountKeywords(string text, string[] keywords)
+    private string PredictSentiment(string text)
     {
-        int count = 0;
-        foreach (var word in keywords)
-        {
-            if (text.Contains(word)) count++;
-        }
-        return count;
+        if (string.IsNullOrWhiteSpace(text)) return "Neutral";
+        var prediction = _predictionEngine!.Predict(new SentimentData { Text = text });
+        return prediction.Prediction ? "Positive" : "Negative";
+    }
+
+    private List<string> DetectThemes(string text)
+    {
+        var themes = new List<string>();
+        if (text.Contains("privacy") || text.Contains("data")) themes.Add("Privacy Concerns");
+        if (text.Contains("penalty") || text.Contains("prison") || text.Contains("fine")) themes.Add("Punishment Severity");
+        if (text.Contains("speech") || text.Contains("press") || text.Contains("freedom")) themes.Add("Freedom of Expression");
+        if (text.Contains("clear") || text.Contains("define") || text.Contains("vague")) themes.Add("Definitional Clarity");
+        return themes;
+    }
+
+    private string GenerateRecommendation(string sentiment, List<string> themes)
+    {
+        if (sentiment == "Negative") return "Significant revision required. Re-evaluate proposed penalties.";
+        if (sentiment == "Mixed") return "Clarification needed. Address concerns regarding " + string.Join(", ", themes.Take(2));
+        if (sentiment == "Positive" && themes.Any()) return "Proceed with proposal, with minor wording adjustments.";
+        return "Proceed with current draft.";
     }
 
     public Task<string> AnalyzeSentimentAsync(string text)
     {
-        var lowerText = text.ToLower();
-        int pos = CountKeywords(lowerText, new[] { "good", "support", "agree", "fine" });
-        int neg = CountKeywords(lowerText, new[] { "bad", "oppose", "heavy", "wrong" });
-
-        if (pos > neg) return Task.FromResult("Positive");
-        if (neg > pos) return Task.FromResult("Negative");
-        return Task.FromResult("Neutral");
+        return Task.FromResult(PredictSentiment(text));
     }
 
     public Task<string> SummarizeOpinionsAsync(List<Opinion> opinions)
     {
-        if (opinions == null || !opinions.Any())
-        {
-            return Task.FromResult("No public opinions submitted for this section.");
-        }
+        if (opinions == null || !opinions.Any()) return Task.FromResult("No feedback.");
 
         var count = opinions.Count;
-        var themes = new List<string>();
-        var text = string.Join(" ", opinions.Select(o => o.OpinionText.ToLower()));
+        var text = string.Join(". ", opinions.Select(o => o.OpinionText));
 
-        if (text.Contains("clear") || text.Contains("unclear")) themes.Add("clarity of definition");
-        if (text.Contains("penalty") || text.Contains("punish")) themes.Add("severity of penalties");
-        if (text.Contains("digital") || text.Contains("online")) themes.Add("the scope of digital services");
+        // Simple extractive: find the shortest sentence that contains a key theme or just the first sentence
+        var sentences = text.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries);
+        var mainPoint = sentences.FirstOrDefault()?.Trim() ?? "Feedback received.";
 
-        string summary = $"Based on {count} submission(s), ";
-        if (themes.Any())
-        {
-            summary += $"citizens primarily commented on {string.Join(" and ", themes)}. ";
-        }
-        else
-        {
-            summary += "general feedback was provided regarding the general direction of the provision. ";
-        }
+        return Task.FromResult($"Analysis of {count} submission(s): {mainPoint}");
+    }
 
-        summary += "Overall, the feedback " + (CountKeywords(text, new[] { "support", "agree" }) > CountKeywords(text, new[] { "oppose", "heavy" }) ? "leans towards support." : "contains significant reservations.");
+    public class SentimentData
+    {
+        [LoadColumn(0)] public string Text { get; set; } = string.Empty;
+        [LoadColumn(1), ColumnName("Label")] public bool Label { get; set; }
+    }
 
-        return Task.FromResult(summary);
+    public class SentimentPrediction : SentimentData
+    {
+        [ColumnName("PredictedLabel")] public bool Prediction { get; set; }
+        public float Probability { get; set; }
+        public float Score { get; set; }
     }
 }

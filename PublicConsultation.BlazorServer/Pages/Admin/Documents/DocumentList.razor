@@ -43,6 +43,8 @@
                 }
                 @if (context.Status == "Published" || context.Status == "Closed")
                 {
+                    <MudIconButton Icon="@Icons.Material.Filled.Forum" Color="Color.Info" Size="Size.Small"
+                        Href="@($"/admin/opinions/{context.Id}")" Tooltip="View Opinions" />
                     <MudIconButton Icon="@Icons.Material.Filled.Assessment" Color="Color.Secondary" Size="Size.Small"
                         Href="@($"/admin/reports/comparative/{context.Id}")" Tooltip="View Comparative Statement" />
                 }

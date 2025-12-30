@@ -7,6 +7,7 @@
 @inject ApplicationDbContext DbContext
 @inject IAiAnalysisService AiService
 @inject IJSRuntime JSRuntime
+@inject IDialogService DialogService
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
     <div class="d-flex justify-space-between align-center mb-6 no-print">
@@ -116,7 +117,8 @@
                 </MudTd>
                 <MudTd Class="no-print">
                     <MudTooltip Text="View raw opinions">
-                        <MudIconButton Icon="@Icons.Material.Filled.List" Size="Size.Small" />
+                        <MudIconButton Icon="@Icons.Material.Filled.List" Size="Size.Small"
+                            OnClick="@(() => ViewRawOpinions(context))" />
                     </MudTooltip>
                 </MudTd>
             </RowTemplate>
@@ -125,17 +127,47 @@
 </MudContainer>
 
 <style>
-    .only-print { display: none; }
+    .only-print {
+        display: none;
+    }
 
     @@media print {
-        .no-print { display: none !important; }
-        .only-print { display: block !important; }
-        .mud-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
-        .mud-paper { box-shadow: none !important; border: 1px solid #eee; }
-        .mud-table-container { overflow: visible !important; }
-        .mud-appbar, .mud-drawer { display: none !important; }
-        .mud-main-content { padding-top: 0 !important; margin-left: 0 !important; }
-        body { background-color: white !important; }
+        .no-print {
+            display: none !important;
+        }
+
+        .only-print {
+            display: block !important;
+        }
+
+        .mud-container {
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .mud-paper {
+            box-shadow: none !important;
+            border: 1px solid #eee;
+        }
+
+        .mud-table-container {
+            overflow: visible !important;
+        }
+
+        .mud-appbar,
+        .mud-drawer {
+            display: none !important;
+        }
+
+        .mud-main-content {
+            padding-top: 0 !important;
+            margin-left: 0 !important;
+        }
+
+        body {
+            background-color: white !important;
+        }
     }
 </style>
 
@@ -170,6 +202,7 @@
             .ToListAsync();
 
             var allOpinions = await DbContext.Opinions
+            .Include(o => o.User)
             .Where(o => o.Rule.DraftDocumentId == DocumentId)
             .ToListAsync();
 
@@ -228,6 +261,19 @@
         "Mixed" => Color.Warning,
         _ => Color.Default
     };
+
+    private async Task ViewRawOpinions(ReportRow row)
+    {
+        var parameters = new DialogParameters
+            {
+                ["Opinions"] = row.Opinions,
+                ["RuleNumber"] = row.Rule.RuleNumber,
+                ["SectionTitle"] = row.Rule.SectionTitle
+            };
+
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        await DialogService.ShowAsync<OpinionListDialog>("Feedback Details", parameters, options);
+    }
 
     private async Task PrintReport()
     {

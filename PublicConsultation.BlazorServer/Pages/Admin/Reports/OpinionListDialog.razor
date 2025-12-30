@@ -1,0 +1,54 @@
+@using PublicConsultation.Core.Entities
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-2">Raw Opinions for Rule @RuleNumber</MudText>
+        <MudText Typo="Typo.subtitle2" Class="mb-4">@SectionTitle</MudText>
+
+        @if (Opinions == null || !Opinions.Any())
+        {
+            <MudAlert Severity="Severity.Info">No raw opinions submitted for this section.</MudAlert>
+        }
+        else
+        {
+            <div style="max-height: 500px; overflow-y: auto;">
+                @foreach (var opinion in Opinions)
+                {
+                    <MudPaper Class="pa-4 mb-3" Elevation="1">
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.subtitle1"><b>@(opinion.User?.FullNameEnglish ?? opinion.User?.Username ??
+                            "Unknown Citizen")</b></MudText>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">
+                                @opinion.CreatedDate.ToShortDateString()</MudChip>
+                        </div>
+
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            <b>Opinion:</b> @opinion.OpinionText
+                        </MudText>
+
+                        @if (!string.IsNullOrEmpty(opinion.Suggestion))
+                        {
+                            <MudAlert Severity="Severity.Success" NoIcon="true" Dense="true" Class="mt-1">
+                                <MudText Typo="Typo.caption"><b>Suggested Rewrite:</b> @opinion.Suggestion</MudText>
+                            </MudAlert>
+                        }
+                    </MudPaper>
+                }
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public List<Opinion> Opinions { get; set; } = new();
+    [Parameter] public string RuleNumber { get; set; } = string.Empty;
+    [Parameter] public string SectionTitle { get; set; } = string.Empty;
+
+    private void Close() => MudDialog.Close();
+}

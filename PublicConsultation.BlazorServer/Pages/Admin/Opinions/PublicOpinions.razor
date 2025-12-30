@@ -1,0 +1,129 @@
+@page "/admin/opinions"
+@page "/admin/opinions/{DocumentId:guid}"
+@attribute [Authorize(Roles = "Admin,Official")]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
+    <MudText Typo="Typo.h4" Class="mb-6">Public Feedback & Opinions</MudText>
+
+    <MudPaper Class="pa-4 mb-6">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect T="Guid?" Label="Filter by Document" Value="@DocumentId" ValueChanged="OnDocumentChanged"
+                    Clearable="true">
+                    <MudSelectItem T="Guid?" Value="null">All Documents</MudSelectItem>
+                    @foreach (var doc in _documents)
+                    {
+                        <MudSelectItem T="Guid?" Value="@doc.Id">@doc.Title</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6" Class="d-flex align-end">
+                <MudTextField @bind-Value="_searchString" Placeholder="Search feedback text..."
+                    Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                    Class="mt-0" Clearable="true" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudTable Items="@_filteredOpinions" Hover="true" Bordered="true" Striped="true" Loading="@_loading" Elevation="4">
+        <HeaderContent>
+            <MudTh>Date</MudTh>
+            <MudTh>Citizen</MudTh>
+            <MudTh>Document / Section</MudTh>
+            <MudTh>Opinion</MudTh>
+            <MudTh>Sentiment (AI)</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Date">@context.CreatedDate.ToShortDateString()</MudTd>
+            <MudTd DataLabel="Citizen">
+                <b>@context.User?.FullNameEnglish</b><br />
+                <MudText Typo="Typo.caption">@context.User?.Email</MudText>
+            </MudTd>
+            <MudTd DataLabel="Section">
+                <MudLink Href="@($"/consultation/{context.Rule?.DraftDocumentId}")" Typo="Typo.body2">
+                    @context.Rule?.DraftDocument?.Title
+                </MudLink><br />
+                <MudText Typo="Typo.caption">Section @context.Rule?.RuleNumber: @context.Rule?.SectionTitle</MudText>
+            </MudTd>
+            <MudTd DataLabel="Opinion">
+                <MudText Typo="Typo.body2">@context.OpinionText</MudText>
+                @if (!string.IsNullOrEmpty(context.Suggestion))
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true" Class="mt-1 py-0 px-2" NoIcon="true">
+                        <MudText Typo="Typo.caption"><b>Suggestion:</b> @context.Suggestion</MudText>
+                    </MudAlert>
+                }
+            </MudTd>
+            <MudTd DataLabel="Sentiment">
+                <MudChip T="string" Color="@GetSentimentColor(context.Sentiment)" Size="Size.Small">@(context.Sentiment
+                    ?? "Pending")</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.BarChart" Color="Color.Primary" Size="Size.Small"
+                        Href="@($"/admin/reports/comparative/{context.Rule?.DraftDocumentId}")" Tooltip="View Report" />
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </MudContainer>
+
+    @code {
+    [Parameter] public Guid? DocumentId { get; set; }
+
+    private List<Opinion> _opinions = new();
+    private List<DraftDocument> _documents = new();
+    private string _searchString = "";
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _documents = await DbContext.DraftDocuments.OrderByDescending(d => d.CreatedDate).ToListAsync();
+        await LoadOpinions();
+        _loading = false;
+    }
+
+    private async Task LoadOpinions()
+    {
+        var query = DbContext.Opinions
+        .Include(o => o.User)
+        .Include(o => o.Rule)
+        .ThenInclude(r => r!.DraftDocument)
+        .AsQueryable();
+
+        if (DocumentId.HasValue)
+        {
+            query = query.Where(o => o.Rule!.DraftDocumentId == DocumentId.Value);
+        }
+
+        _opinions = await query.OrderByDescending(o => o.CreatedDate).ToListAsync();
+    }
+
+    private IEnumerable<Opinion> _filteredOpinions => _opinions
+    .Where(o => string.IsNullOrWhiteSpace(_searchString) ||
+    o.OpinionText.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
+    (o.User?.FullNameEnglish?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false));
+
+    private void OnDocumentChanged(Guid? id)
+    {
+        DocumentId = id;
+        NavigationManager.NavigateTo(id.HasValue ? $"/admin/opinions/{id}" : "/admin/opinions");
+        Task.Run(LoadOpinions).ContinueWith(_ => InvokeAsync(StateHasChanged));
+    }
+
+    private Color GetSentimentColor(string? s) => s switch
+    {
+        "Positive" => Color.Success,
+        "Negative" => Color.Error,
+        "Mixed" => Color.Warning,
+        _ => Color.Default
+    };
+}
