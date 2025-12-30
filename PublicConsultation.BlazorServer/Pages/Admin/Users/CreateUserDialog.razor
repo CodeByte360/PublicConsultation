@@ -1,0 +1,73 @@
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@inject IAuthService AuthService
+@inject ApplicationDbContext DbContext
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudTextField T="string" Label="Username" Required="true" @bind-Value="model.Username" />
+            <MudTextField T="string" Label="Email" Required="true" InputType="InputType.Email"
+            @bind-Value="model.Email" />
+            <MudTextField T="string" Label="Password" Required="true" InputType="InputType.Password"
+            @bind-Value="password" />
+
+            <MudSelect T="Guid" Label="Role" Required="true" @bind-Value="selectedRoleId"
+                AnchorOrigin="Origin.BottomCenter">
+                @foreach (var role in Roles)
+                {
+                    <MudSelectItem Value="@role.Id">@role.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField T="string" Label="Full Name" @bind-Value="model.FullNameEnglish" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!success)">Create</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    MudForm form;
+    bool success;
+    UserAccount model = new UserAccount();
+    string password;
+    Guid selectedRoleId;
+    List<Role> Roles = new List<Role>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Roles = await DbContext.Roles.ToListAsync();
+        // Default to Citizen if available
+        var citizen = Roles.FirstOrDefault(r => r.Name == "Citizen");
+        if (citizen != null) selectedRoleId = citizen.Id;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            try
+            {
+                model.IsVerified = true; // Admin created users are verified by default
+                await AuthService.RegisterUserAsync(model, password, selectedRoleId);
+                Snackbar.Add("User created successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

@@ -1,0 +1,168 @@
+@page "/admin/documents/{Id:guid}"
+@attribute [Authorize(Roles = "Admin")]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@inject ApplicationDbContext DbContext
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    @if (_document == null)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="3">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.h5">@_document.Title</MudText>
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@_document.MinistryOrDepartment</MudText>
+                </div>
+                <div>
+                    <MudChip T="string" Color="@GetStatusColor(_document.Status)">@_document.Status</MudChip>
+                    @if (_document.Status == "Draft")
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="PublishDocument">Publish</MudButton>
+                    }
+                    else if (_document.Status == "Published")
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="CloseConsultation">Close</MudButton>
+                        <MudButton Variant="Variant.Filled" Color="Color.Info" Class="ml-2"
+                            Href="@($"/admin/reports/comparative/{Id}")">Comparative Statement</MudButton>
+                    }
+                </div>
+            </div>
+            <MudDivider Class="my-3" />
+            <MudText Typo="Typo.body2">@_document.Description</MudText>
+            <MudText Typo="Typo.caption" Class="mt-2 text-muted">Consultation Period:
+                @_document.ConsultationStartDate.ToShortDateString() - @_document.ConsultationEndDate.ToShortDateString()
+            </MudText>
+        </MudPaper>
+
+        <div class="d-flex justify-space-between align-center mt-6 mb-2">
+            <MudText Typo="Typo.h6">Rules & Provisions</MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                OnClick="AddRule">Add Rule</MudButton>
+        </div>
+
+        <MudTable Items="@_rules" Hover="true" Dense="true" Elevation="2">
+            <HeaderContent>
+                <MudTh>Order</MudTh>
+                <MudTh>Rule No</MudTh>
+                <MudTh>Topic</MudTh>
+                <MudTh>Existing</MudTh>
+                <MudTh>Proposed</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Order">@context.DisplayOrder</MudTd>
+                <MudTd DataLabel="Rule No">@context.RuleNumber</MudTd>
+                <MudTd DataLabel="Topic">@context.SectionTitle</MudTd>
+                <MudTd DataLabel="Existing">
+                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@context.ExistingProvision</MudText>
+                </MudTd>
+                <MudTd DataLabel="Proposed">
+                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@context.ProposedProvision</MudText>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Info"
+                        OnClick="@(() => EditRule(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                        OnClick="@(() => DeleteRule(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private DraftDocument? _document;
+    private List<Rule> _rules = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _document = await DbContext.DraftDocuments.FirstOrDefaultAsync(d => d.Id == Id);
+        if (_document != null)
+        {
+            _rules = await DbContext.Rules.Where(r => r.DraftDocumentId == Id).OrderBy(r => r.DisplayOrder).ToListAsync();
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Draft" => Color.Warning,
+        "Published" => Color.Success,
+        "Closed" => Color.Default,
+        _ => Color.Info
+    };
+
+    private async Task PublishDocument()
+    {
+        if (_document != null)
+        {
+            _document.Status = "Published";
+            await DbContext.SaveChangesAsync();
+            Snackbar.Add("Document Published Successfully!", Severity.Success);
+        }
+    }
+
+    private async Task CloseConsultation()
+    {
+        if (_document != null)
+        {
+            _document.Status = "Closed";
+            await DbContext.SaveChangesAsync();
+            Snackbar.Add("Consultation Closed.", Severity.Info);
+        }
+    }
+
+    private async Task AddRule()
+    {
+        var parameters = new DialogParameters { ["DraftDocumentId"] = Id };
+        var dialog = DialogService.Show<RuleDialog>("Add Rule", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task EditRule(Rule rule)
+    {
+        var parameters = new DialogParameters { ["RuleId"] = rule.Id, ["DraftDocumentId"] = Id };
+        var dialog = DialogService.Show<RuleDialog>("Edit Rule", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task DeleteRule(Rule rule)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+        "Warning",
+        "Deleting can not be undone!",
+        yesText: "Delete!", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            DbContext.Rules.Remove(rule);
+            await DbContext.SaveChangesAsync();
+            await LoadData();
+            Snackbar.Add("Rule Deleted", Severity.Success);
+        }
+    }
+}

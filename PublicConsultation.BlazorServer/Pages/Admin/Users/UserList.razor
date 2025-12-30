@@ -1,0 +1,74 @@
+@page "/admin/users"
+@attribute [Authorize(Roles = "Admin")]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@inject ApplicationDbContext DbContext
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h5">User Management</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateUser">Create User</MudButton>
+    </div>
+
+    <MudTable Items="@Users" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading"
+        LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>Username</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Full Name</MudTh>
+            <MudTh>Role</MudTh>
+            <MudTh>Verified</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Username">@context.Username</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Full Name">@context.FullNameEnglish</MudTd>
+            <MudTd DataLabel="Role">
+                <MudChip T="string" Color="Color.Primary" Size="Size.Small">@context.Role?.Name</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Verified">
+                @if (context.IsVerified)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" />
+                }
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<UserAccount> Users = new List<UserAccount>();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        _loading = true;
+        Users = await DbContext.UserAccounts.Include(u => u.Role).OrderBy(u => u.Username).ToListAsync();
+        _loading = false;
+    }
+
+    private async Task CreateUser()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = DialogService.Show<CreateUserDialog>("Create New User", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadUsers();
+        }
+    }
+}

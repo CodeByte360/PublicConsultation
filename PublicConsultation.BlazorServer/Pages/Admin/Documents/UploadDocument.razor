@@ -1,0 +1,99 @@
+@page "/admin/documents/upload"
+@attribute [Authorize(Roles = "Admin")]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@using PublicConsultation.Infrastructure.Data
+@inject IDocumentService DocumentService
+@inject ApplicationDbContext DbContext
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" GutterBottom="true">Upload Draft Document</MudText>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudTextField T="string" Label="Document Title" Required="true" @bind-Value="model.Title" />
+            <MudTextField T="string" Label="Ministry / Department" Required="true"
+                @bind-Value="model.MinistryOrDepartment" />
+            <MudTextField T="string" Label="Description" Lines="3" @bind-Value="model.Description" />
+
+            <MudDateRangePicker Label="Consultation Period" @bind-DateRange="_dateRange" Required="true" />
+
+            <MudFileUpload T="IBrowserFile" OnFilesChanged="UploadFile" Class="mt-4">
+                <ActivatorContent>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                        StartIcon="@Icons.Material.Filled.CloudUpload">
+                        Select File (PDF/DOCX)
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+            @if (_file != null)
+            {
+                <MudText Typo="Typo.body2" Class="mt-2">Selected: @_file.Name</MudText>
+            }
+
+            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="Submit" Class="mt-6">
+                Upload & Create
+            </MudButton>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    MudForm form;
+    bool success;
+    DraftDocument model = new DraftDocument();
+    DateRange _dateRange = new DateRange(DateTime.Today, DateTime.Today.AddDays(14));
+    IBrowserFile _file;
+
+    private void UploadFile(InputFileChangeEventArgs e)
+    {
+        _file = e.File;
+    }
+
+    private async Task Submit()
+    {
+        await form.Validate();
+
+        if (_file == null)
+        {
+            Snackbar.Add("Please select a document file.", Severity.Error);
+            return;
+        }
+
+        if (form.IsValid)
+        {
+            try
+            {
+                // Upload File
+                using var stream = _file.OpenReadStream(10 * 1024 * 1024); // 10MB limit
+                var filePath = await DocumentService.UploadDocumentAsync(stream, _file.Name);
+
+                // Save Entity
+                model.FilePath = filePath;
+                model.ConsultationStartDate = _dateRange.Start ?? DateTime.Today;
+                model.ConsultationEndDate = _dateRange.End ?? DateTime.Today.AddDays(14);
+                model.Status = "Draft";
+
+                DbContext.DraftDocuments.Add(model);
+                await DbContext.SaveChangesAsync();
+
+                // Trigger Parsing (Fire and forget or await?) - For now await
+                var rules = await DocumentService.ParseDocumentAsync(filePath);
+                foreach (var rule in rules)
+                {
+                    rule.DraftDocumentId = model.Id;
+                    DbContext.Rules.Add(rule);
+                }
+                await DbContext.SaveChangesAsync();
+
+                Snackbar.Add("Document uploaded and parsed successfully!", Severity.Success);
+                NavigationManager.NavigateTo("/admin/documents");
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

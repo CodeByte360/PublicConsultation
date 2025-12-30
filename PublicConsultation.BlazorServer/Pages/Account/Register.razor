@@ -1,0 +1,68 @@
+@page "/register"
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" GutterBottom="true" Align="Align.Center">Create an Account</MudText>
+        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+            <MudTextField T="string" Label="Username" Required="true" RequiredError="Username is required!"
+            @bind-Value="registerModel.Username" />
+            <MudTextField T="string" Label="Email" Required="true" RequiredError="Email is required!"
+            @bind-Value="registerModel.Email" InputType="InputType.Email" />
+            <MudTextField T="string" Label="Password" Required="true" RequiredError="Password is required!"
+            @bind-Value="password" InputType="InputType.Password" />
+            <MudTextField T="string" Label="Confirm Password" Required="true"
+                RequiredError="Password Confirmation is required!" @bind-Value="confirmPassword"
+                InputType="InputType.Password" Validation="@(new Func<string, IEnumerable<string>>(PasswordMatch))" />
+
+            <MudTextField T="string" Label="Full Name (English)" @bind-Value="registerModel.FullNameEnglish" />
+            <MudTextField T="string" Label="Full Name (Bangla)" @bind-Value="registerModel.FullNameBangla" />
+            <MudTextField T="string" Label="Mobile Number" @bind-Value="registerModel.PhoneNumber" />
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Elevation="0" OnClick="Submit" Class="mt-4"
+                FullWidth="true" Disabled="@(!success)">Register</MudButton>
+        </MudForm>
+        <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-4">
+            Already have an account? <MudLink Href="/login">Login here</MudLink>
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    MudForm form;
+    bool success;
+    string[] errors = { };
+
+    UserAccount registerModel = new UserAccount();
+    string password;
+    string confirmPassword;
+
+    private IEnumerable<string> PasswordMatch(string arg)
+    {
+        if (password != arg)
+            yield return "Passwords don't match";
+    }
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            try
+            {
+                // In a real scenario you would verify uniqueness first or handle exception
+                var user = await AuthService.RegisterUserAsync(registerModel, password);
+                Snackbar.Add("Registration Successful!", Severity.Success);
+                NavigationManager.NavigateTo("/login");
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Registration Failed: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

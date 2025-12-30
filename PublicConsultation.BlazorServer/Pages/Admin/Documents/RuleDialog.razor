@@ -1,0 +1,96 @@
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudNumericField Label="Display Order" @bind-Value="model.DisplayOrder" />
+            <MudTextField Label="Rule Number" @bind-Value="model.RuleNumber" Required="true" />
+            <MudTextField Label="Section Title" @bind-Value="model.SectionTitle" />
+            <MudTextField Label="Existing Provision" @bind-Value="model.ExistingProvision" Lines="3" />
+            <MudTextField Label="Proposed Provision" @bind-Value="model.ProposedProvision" Lines="3" Required="true" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!success)">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Guid DraftDocumentId { get; set; }
+    [Parameter] public Guid? RuleId { get; set; }
+
+    private MudForm form;
+    private bool success;
+    private Rule model = new Rule();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (RuleId.HasValue)
+        {
+            var existing = await DbContext.Rules.FindAsync(RuleId.Value);
+            if (existing != null)
+            {
+                // Simple clone to avoid tracking issues if we cancel
+                model = new Rule
+                    {
+                        Id = existing.Id,
+                        DraftDocumentId = existing.DraftDocumentId,
+                        DisplayOrder = existing.DisplayOrder,
+                        RuleNumber = existing.RuleNumber,
+                        SectionTitle = existing.SectionTitle,
+                        ExistingProvision = existing.ExistingProvision,
+                        ProposedProvision = existing.ProposedProvision
+                    };
+            }
+        }
+        else
+        {
+            model.DraftDocumentId = DraftDocumentId;
+            // Auto increment order
+            var maxOrder = await DbContext.Rules
+            .Where(r => r.DraftDocumentId == DraftDocumentId)
+            .MaxAsync(r => (int?)r.DisplayOrder) ?? 0;
+            model.DisplayOrder = maxOrder + 1;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            if (RuleId.HasValue)
+            {
+                // Update
+                var existing = await DbContext.Rules.FindAsync(RuleId.Value);
+                if (existing != null)
+                {
+                    existing.DisplayOrder = model.DisplayOrder;
+                    existing.RuleNumber = model.RuleNumber;
+                    existing.SectionTitle = model.SectionTitle;
+                    existing.ExistingProvision = model.ExistingProvision;
+                    existing.ProposedProvision = model.ProposedProvision;
+                    DbContext.Rules.Update(existing);
+                }
+            }
+            else
+            {
+                // Create
+                DbContext.Rules.Add(model);
+            }
+
+            await DbContext.SaveChangesAsync();
+            Snackbar.Add("Rule Saved", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+    }
+}

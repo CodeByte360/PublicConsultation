@@ -1,0 +1,62 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+            OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h6" Class="ml-3">Digital Public Consultation System</MudText>
+        <MudSpacer />
+        <AuthorizeView>
+            <Authorized>
+                <MudText Class="mr-4">Hello, @context.User.Identity?.Name</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="Logout">Logout</MudButton>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">Login</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Class="ml-2" Href="/register">Register
+                </MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <MudNavMenu>
+            <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+            <MudNavGroup Title="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="true">
+                <MudNavLink Href="/admin/documents" Match="NavLinkMatch.Prefix">Documents</MudNavLink>
+                <MudNavLink Href="/admin/users" Match="NavLinkMatch.Prefix">Users</MudNavLink>
+            </MudNavGroup>
+
+            <MudDivider Class="my-2" />
+
+            <MudNavLink Href="/active-consultations" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Public">
+                Active Consultations</MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="my-4 pt-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@inject NavigationManager NavigationManager
+@inject PublicConsultation.Core.Interfaces.IAuthService AuthService
+
+@code {
+    bool _drawerOpen = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        NavigationManager.NavigateTo("/", forceLoad: true);
+    }
+}

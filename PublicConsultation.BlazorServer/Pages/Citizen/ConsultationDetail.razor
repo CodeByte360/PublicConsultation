@@ -1,0 +1,108 @@
+@page "/consultation/{Id:guid}"
+@attribute [Authorize]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject ApplicationDbContext DbContext
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    @if (_document == null)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mb-6" Elevation="3">
+            <MudText Typo="Typo.h4">@_document.Title</MudText>
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@_document.MinistryOrDepartment</MudText>
+            <MudText Typo="Typo.body1" Class="mt-4">@_document.Description</MudText>
+            <MudDivider Class="my-4" />
+            <MudAlert Severity="Severity.Info">Click on "Give Opinion" next to any rule to submit your feedback.</MudAlert>
+        </MudPaper>
+
+        <MudText Typo="Typo.h5" Class="mb-4">Draft Rules</MudText>
+
+        @foreach (var rule in _rules)
+        {
+            <MudPaper Class="pa-4 mb-4 border-l-4 border-solid border-primary" Elevation="2">
+                <div class="d-flex justify-space-between">
+                    <MudText Typo="Typo.h6">Rule @rule.RuleNumber: @rule.SectionTitle</MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Comment"
+                        OnClick="@(() => OpenOpinionDialog(rule))">Give Opinion</MudButton>
+                </div>
+
+                <MudGrid Class="mt-2">
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Default">Existing Provision</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">@rule.ExistingProvision</MudText>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Success">Proposed Provision</MudText>
+                        <MudText Typo="Typo.body2">@rule.ProposedProvision</MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        }
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private DraftDocument? _document;
+    private List<Rule> _rules = new();
+    private Guid _currentUserId;
+    private bool _isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+
+        if (_isAuthenticated)
+        {
+            var userIdClaim = user.FindFirst("UserId");
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var uid))
+            {
+                _currentUserId = uid;
+            }
+        }
+
+        _document = await DbContext.DraftDocuments.FirstOrDefaultAsync(d => d.Id == Id);
+        if (_document != null)
+        {
+            _rules = await DbContext.Rules.Where(r => r.DraftDocumentId == Id).OrderBy(r => r.DisplayOrder).ToListAsync();
+        }
+    }
+
+    private async Task OpenOpinionDialog(Rule rule)
+    {
+        if (!_isAuthenticated)
+        {
+            Snackbar.Add("Please login to submit an opinion.", Severity.Warning);
+            NavigationManager.NavigateTo($"/login?returnUrl=/consultation/{Id}");
+            return;
+        }
+
+        var parameters = new DialogParameters
+            {
+                ["RuleId"] = rule.Id,
+                ["RuleNumber"] = rule.RuleNumber,
+                ["UserId"] =
+            _currentUserId
+            };
+        var dialog = DialogService.Show<OpinionDialog>("Submit Opinion", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Opinion Submitted Successfully!", Severity.Success);
+        }
+    }
+}

@@ -1,0 +1,46 @@
+@page "/login"
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5" GutterBottom="true" Align="Align.Center">Login</MudText>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@ErrorMessage</MudAlert>
+        }
+
+        <form action="/account/login" method="post">
+            <MudTextField T="string" Label="Email" Name="email" Required="true" InputType="InputType.Email" />
+            <MudTextField T="string" Label="Password" Name="password" Required="true" InputType="InputType.Password" />
+
+            <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mt-4"
+                FullWidth="true">Login</MudButton>
+        </form>
+
+        <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-4">
+            Don't have an account? <MudLink Href="/register">Register here</MudLink>
+        </MudText>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    public string ErrorMessage => Error;
+
+    public string ReturnUrl { get; set; } = "/";
+
+    protected override void OnInitialized()
+    {
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("returnUrl", out var returnUrl))
+        {
+            ReturnUrl = returnUrl;
+        }
+    }
+}

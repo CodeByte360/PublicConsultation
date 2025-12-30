@@ -1,0 +1,48 @@
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@inject ApplicationDbContext DbContext
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body1" Class="mb-4">You are submitting an opinion for <b>Rule @RuleNumber</b>.</MudText>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudTextField Label="Your Opinion / Feedback" @bind-Value="model.OpinionText" Lines="4" Required="true"
+                RequiredError="Opinion is required." />
+            <MudTextField Label="Suggested Alternative (Optional)" @bind-Value="model.Suggestion" Lines="3" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!success)">Submit</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Guid RuleId { get; set; }
+    [Parameter] public string RuleNumber { get; set; }
+    [Parameter] public Guid UserId { get; set; }
+
+    private MudForm form;
+    private bool success;
+    private Opinion model = new Opinion();
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            model.RuleId = RuleId;
+            model.UserId = UserId;
+            model.CreatedDate = DateTime.UtcNow;
+
+            DbContext.Opinions.Add(model);
+            await DbContext.SaveChangesAsync();
+
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+    }
+}

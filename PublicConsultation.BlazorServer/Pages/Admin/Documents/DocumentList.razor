@@ -1,0 +1,65 @@
+@page "/admin/documents"
+@attribute [Authorize(Roles = "Admin")]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@inject ApplicationDbContext DbContext
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h5">Draft Documents</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/admin/documents/upload">Upload New Draft
+        </MudButton>
+    </div>
+
+    <MudTable Items="@Documents" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading"
+        LoadingProgressColor="Color.Info">
+        <HeaderContent>
+            <MudTh>Title</MudTh>
+            <MudTh>Ministry</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Consultation Period</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Title">@context.Title</MudTd>
+            <MudTd DataLabel="Ministry">@context.MinistryOrDepartment</MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small">@context.Status</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Period">
+                @context.ConsultationStartDate.ToShortDateString() - @context.ConsultationEndDate.ToShortDateString()
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
+                    Href="@($"/admin/documents/{context.Id}")" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<DraftDocument> Documents = new List<DraftDocument>();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        Documents = await DbContext.DraftDocuments.OrderByDescending(d => d.CreatedDate).ToListAsync();
+        _loading = false;
+    }
+
+    private Color GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Draft" => Color.Warning,
+            "Published" => Color.Success,
+            "Closed" => Color.Default,
+            _ => Color.Info
+        };
+    }
+}

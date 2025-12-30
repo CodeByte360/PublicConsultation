@@ -1,0 +1,116 @@
+@page "/admin/reports/comparative/{DocumentId:guid}"
+@attribute [Authorize(Roles = "Admin")]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@inject ApplicationDbContext DbContext
+@inject IAiAnalysisService AiService
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
+    @if (_loading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <MudText>Generating AI Analysis...</MudText>
+    }
+    else if (_document != null)
+    {
+        <MudText Typo="Typo.h4" GutterBottom="true">Comparative Statement</MudText>
+        <MudText Typo="Typo.h6">@_document.Title</MudText>
+        <MudText Typo="Typo.subtitle1" Class="mb-4">@_document.MinistryOrDepartment</MudText>
+
+        <MudTable Items="@_reportRows" Hover="true" Bordered="true" Striped="true" Elevation="4">
+            <HeaderContent>
+                <MudTh>Rule / Section</MudTh>
+                <MudTh>Existing Provision</MudTh>
+                <MudTh>Proposed Provision</MudTh>
+                <MudTh Style="background-color: #e8f5e9;">Public Opinion Summary (AI)</MudTh>
+                <MudTh>Remarks / Decision</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Section">
+                    <b>@context.Rule.RuleNumber</b><br />
+                    @context.Rule.SectionTitle
+                </MudTd>
+                <MudTd DataLabel="Existing">@context.Rule.ExistingProvision</MudTd>
+                <MudTd DataLabel="Proposed">@context.Rule.ProposedProvision</MudTd>
+                <MudTd DataLabel="Summary" Style="background-color: #f1f8e9;">
+                    @if (context.IsProcessing)
+                    {
+                        <MudProgressLinear Color="Color.Success" Indeterminate="true" />
+                    }
+                    else
+                    {
+                        @context.AiSummary
+                    }
+                </MudTd>
+                <MudTd DataLabel="Remarks">
+                    <MudTextField T="string" Variant="Variant.Outlined" Lines="3" Placeholder="Official remarks..." />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid DocumentId { get; set; }
+
+    private DraftDocument _document;
+    private List<ReportRow> _reportRows = new();
+    private bool _loading = true;
+
+    private class ReportRow
+    {
+        public Rule Rule { get; set; }
+        public List<Opinion> Opinions { get; set; }
+        public string AiSummary { get; set; }
+        public bool IsProcessing { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _loading = true;
+        _document = await DbContext.DraftDocuments.FindAsync(DocumentId);
+
+        if (_document != null)
+        {
+            var rules = await DbContext.Rules
+            .Where(r => r.DraftDocumentId == DocumentId)
+            .OrderBy(r => r.DisplayOrder)
+            .ToListAsync();
+
+            var allOpinions = await DbContext.Opinions
+            .Where(o => o.Rule.DraftDocumentId == DocumentId)
+            .ToListAsync();
+
+            foreach (var rule in rules)
+            {
+                var row = new ReportRow
+                    {
+                        Rule = rule,
+                        Opinions = allOpinions.Where(o => o.RuleId == rule.Id).ToList(),
+                        IsProcessing = true
+                    };
+                _reportRows.Add(row);
+            }
+
+            _loading = false;
+            StateHasChanged(); // Render table first
+
+            // Process AI Summaries in parallel (simulated)
+            await ProcessAiSummaries();
+        }
+    }
+
+    private async Task ProcessAiSummaries()
+    {
+        foreach (var row in _reportRows)
+        {
+            row.AiSummary = await AiService.SummarizeOpinionsAsync(row.Opinions);
+            row.IsProcessing = false;
+            StateHasChanged();
+            await Task.Delay(500); // Simulate processing delay for visual effect
+        }
+    }
+}
