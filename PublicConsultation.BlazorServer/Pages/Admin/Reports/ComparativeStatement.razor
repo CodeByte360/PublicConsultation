@@ -8,14 +8,21 @@
 @inject IAiAnalysisService AiService
 @inject IJSRuntime JSRuntime
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 no-print">
-    <div class="d-flex justify-space-between align-center mb-6">
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
+    <div class="d-flex justify-space-between align-center mb-6 no-print">
         <div>
             <MudText Typo="Typo.h4">Comparative Statement</MudText>
             <MudText Typo="Typo.subtitle1">@_document?.Title</MudText>
         </div>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print"
             OnClick="PrintReport">Print / Export PDF</MudButton>
+    </div>
+
+    <div class="only-print mb-4">
+        <MudText Typo="Typo.h4">Comparative Statement Report</MudText>
+        <MudText Typo="Typo.h6">Document: @_document?.Title</MudText>
+        <MudText Typo="Typo.subtitle1">Ministry: @_document?.MinistryOrDepartment</MudText>
+        <MudDivider Class="my-2" />
     </div>
 
     @if (_loading)
@@ -118,29 +125,17 @@
 </MudContainer>
 
 <style>
+    .only-print { display: none; }
+
     @@media print {
-        .no-print {
-            display: none !important;
-        }
-
-        .mud-container {
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-
-        .mud-paper {
-            box-shadow: none !important;
-            border: 1px solid #eee;
-        }
-
-        .mud-table-container {
-            overflow: visible !important;
-        }
-
-        body {
-            background-color: white !important;
-        }
+        .no-print { display: none !important; }
+        .only-print { display: block !important; }
+        .mud-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        .mud-paper { box-shadow: none !important; border: 1px solid #eee; }
+        .mud-table-container { overflow: visible !important; }
+        .mud-appbar, .mud-drawer { display: none !important; }
+        .mud-main-content { padding-top: 0 !important; margin-left: 0 !important; }
+        body { background-color: white !important; }
     }
 </style>
 
