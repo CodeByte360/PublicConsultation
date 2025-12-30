@@ -1,11 +1,12 @@
 @page "/admin/documents"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "Admin,Official")]
 @using PublicConsultation.Core.Entities
 @using PublicConsultation.Infrastructure.Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
 @inject ApplicationDbContext DbContext
 @inject NavigationManager NavigationManager
+@inject PublicConsultation.Core.Interfaces.IEmailService EmailService
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <div class="d-flex justify-space-between align-center mb-4">
@@ -35,6 +36,11 @@
             <MudTd DataLabel="Actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
                     Href="@($"/admin/documents/{context.Id}")" />
+                @if (context.Status == "Draft")
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Publish" Color="Color.Success" Size="Size.Small"
+                        OnClick="@(() => PublishQuick(context))" />
+                }
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" />
             </MudTd>
         </RowTemplate>
@@ -61,5 +67,38 @@
             "Closed" => Color.Default,
             _ => Color.Info
         };
+    }
+
+    private async Task PublishQuick(DraftDocument doc)
+    {
+        doc.Status = "Published";
+        await DbContext.SaveChangesAsync();
+        await NotifyCitizensAsync(doc);
+        StateHasChanged();
+    }
+
+    private async Task NotifyCitizensAsync(DraftDocument doc)
+    {
+        var citizens = await DbContext.UserAccounts
+        .Where(u => u.Role.Name == "Citizen")
+        .Select(u => u.Email)
+        .ToListAsync();
+
+        if (citizens.Any())
+        {
+            var subject = $"New Public Consultation: {doc.Title}";
+            var body = $@"
+<h3>New Consultation Published</h3>
+<p>The ministry has published a new draft document for public consultation: <strong>{doc.Title}</strong></p>
+<p>Ministry: {doc.MinistryOrDepartment}</p>
+<p>You can participate and give your opinion here:</p>
+<p><a href='{NavigationManager.BaseUri}active-consultations'>View All Consultations</a></p>
+<p>Or view this specific document directly:</p>
+<p><a href='{NavigationManager.BaseUri}consultation/{doc.Id}'>{doc.Title}</a></p>
+<br/>
+<p>Thank you for participating in the legislative process.</p>";
+
+            await EmailService.SendBulkEmailAsync(citizens, subject, body);
+        }
     }
 }

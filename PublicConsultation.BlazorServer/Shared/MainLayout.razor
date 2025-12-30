@@ -25,15 +25,24 @@
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <MudNavMenu>
             <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-            <MudNavGroup Title="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="true">
-                <MudNavLink Href="/admin/documents" Match="NavLinkMatch.Prefix">Documents</MudNavLink>
-                <MudNavLink Href="/admin/users" Match="NavLinkMatch.Prefix">Users</MudNavLink>
-            </MudNavGroup>
+            <AuthorizeView Roles="Admin">
+                <MudNavGroup Title="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings">
+                    <MudNavLink Href="/admin/users" Match="NavLinkMatch.Prefix">User Management</MudNavLink>
+                </MudNavGroup>
+            </AuthorizeView>
+
+            <AuthorizeView Roles="Admin,Official">
+                <MudNavGroup Title="Officer / Official" Icon="@Icons.Material.Filled.Work">
+                    <MudNavLink Href="/admin/documents" Match="NavLinkMatch.Prefix">Draft Documents</MudNavLink>
+                </MudNavGroup>
+            </AuthorizeView>
 
             <MudDivider Class="my-2" />
 
-            <MudNavLink Href="/active-consultations" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Public">
-                Active Consultations</MudNavLink>
+            <MudNavGroup Title="Citizen" Icon="@Icons.Material.Filled.People" Expanded="true">
+                <MudNavLink Href="/active-consultations" Match="NavLinkMatch.Prefix">Public Consultations
+                </MudNavLink>
+            </MudNavGroup>
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
@@ -54,9 +63,8 @@
         _drawerOpen = !_drawerOpen;
     }
 
-    private async Task Logout()
+    private void Logout()
     {
-        await AuthService.LogoutAsync();
-        NavigationManager.NavigateTo("/", forceLoad: true);
+        NavigationManager.NavigateTo("/account/logout", forceLoad: true);
     }
 }

@@ -22,12 +22,14 @@ public static class DbSeeder
             await context.SaveChangesAsync();
         }
 
-        if (!await context.UserAccounts.AnyAsync(u => u.Role.Name == "Admin"))
+        var adminUser = await context.UserAccounts.Include(u => u.Role).FirstOrDefaultAsync(u => u.Username == "admin");
+        var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
+
+        if (adminRole != null)
         {
-            var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
-            if (adminRole != null)
+            if (adminUser == null)
             {
-                var adminUser = new UserAccount
+                adminUser = new UserAccount
                 {
                     Username = "admin",
                     Email = "admin@consultation.gov.bd",
@@ -35,8 +37,12 @@ public static class DbSeeder
                     IsVerified = true,
                     RoleId = adminRole.Id
                 };
-
-                await authService.RegisterUserAsync(adminUser, "Admin@123");
+                await authService.RegisterUserAsync(adminUser, "Admin@123", adminRole.Id);
+            }
+            else if (adminUser.Role?.Name != "Admin")
+            {
+                adminUser.RoleId = adminRole.Id;
+                await context.SaveChangesAsync();
             }
         }
     }

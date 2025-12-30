@@ -1,5 +1,4 @@
 @page "/consultation/{Id:guid}"
-@attribute [Authorize]
 @using PublicConsultation.Core.Entities
 @using PublicConsultation.Infrastructure.Data
 @using Microsoft.EntityFrameworkCore
@@ -19,11 +18,18 @@
     else
     {
         <MudPaper Class="pa-4 mb-6" Elevation="3">
-            <MudText Typo="Typo.h4">@_document.Title</MudText>
-            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@_document.MinistryOrDepartment</MudText>
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.h4">@_document.Title</MudText>
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@_document.MinistryOrDepartment</MudText>
+                </div>
+                <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.Download"
+                    Href="@($"/documents/download/{Id}")" target="_blank">View Original PDF / Document</MudButton>
+            </div>
             <MudText Typo="Typo.body1" Class="mt-4">@_document.Description</MudText>
             <MudDivider Class="my-4" />
-            <MudAlert Severity="Severity.Info">Click on "Give Opinion" next to any rule to submit your feedback.</MudAlert>
+            <MudAlert Severity="Severity.Info">Click on "Give Opinion" next to any rule to submit your feedback. You can
+                also view the original document using the button above.</MudAlert>
         </MudPaper>
 
         <MudText Typo="Typo.h5" Class="mb-4">Draft Rules</MudText>
@@ -33,8 +39,13 @@
             <MudPaper Class="pa-4 mb-4 border-l-4 border-solid border-primary" Elevation="2">
                 <div class="d-flex justify-space-between">
                     <MudText Typo="Typo.h6">Rule @rule.RuleNumber: @rule.SectionTitle</MudText>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Comment"
-                        OnClick="@(() => OpenOpinionDialog(rule))">Give Opinion</MudButton>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="@(HasSubmitted(rule.Id) ? Color.Success : Color.Primary)" 
+                               StartIcon="@(HasSubmitted(rule.Id) ? Icons.Material.Filled.Check : Icons.Material.Filled.Comment)"
+                               Disabled="@HasSubmitted(rule.Id)"
+                               OnClick="@(() => OpenOpinionDialog(rule))">
+                        @(HasSubmitted(rule.Id) ? "Submitted" : "Give Opinion")
+                    </MudButton>
                 </div>
 
                 <MudGrid Class="mt-2">
@@ -56,10 +67,16 @@
     [Parameter] public Guid Id { get; set; }
     private DraftDocument? _document;
     private List<Rule> _rules = new();
+    private HashSet<Guid> _userOpinionRuleIds = new();
     private Guid _currentUserId;
     private bool _isAuthenticated;
 
     protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
@@ -71,6 +88,13 @@
             if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var uid))
             {
                 _currentUserId = uid;
+
+                // Load existing opinions for this user and document
+                var existingOpinions = await DbContext.Opinions
+                .Where(o => o.UserId == _currentUserId && o.Rule.DraftDocumentId == Id)
+                .Select(o => o.RuleId)
+                .ToListAsync();
+                _userOpinionRuleIds = new HashSet<Guid>(existingOpinions);
             }
         }
 
@@ -80,6 +104,8 @@
             _rules = await DbContext.Rules.Where(r => r.DraftDocumentId == Id).OrderBy(r => r.DisplayOrder).ToListAsync();
         }
     }
+
+    private bool HasSubmitted(Guid ruleId) => _userOpinionRuleIds.Contains(ruleId);
 
     private async Task OpenOpinionDialog(Rule rule)
     {
@@ -94,8 +120,7 @@
             {
                 ["RuleId"] = rule.Id,
                 ["RuleNumber"] = rule.RuleNumber,
-                ["UserId"] =
-            _currentUserId
+                ["UserId"] = _currentUserId
             };
         var dialog = DialogService.Show<OpinionDialog>("Submit Opinion", parameters);
         var result = await dialog.Result;
@@ -103,6 +128,7 @@
         if (!result.Canceled)
         {
             Snackbar.Add("Opinion Submitted Successfully!", Severity.Success);
+            await LoadData(); // Refresh to disable the button
         }
     }
 }

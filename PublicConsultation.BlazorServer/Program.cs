@@ -1,13 +1,5 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using PublicConsultation.BlazorServer.Data;
-
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
-using PublicConsultation.Core.Entities;
-using PublicConsultation.BlazorServer.Data; // For WeatherForecastService if it exists, otherwise remove
 using PublicConsultation.Infrastructure.Data;
 using Serilog;
 
@@ -41,6 +33,7 @@ builder.Services.AddMudServices();
 // Custom Services
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAuthService, PublicConsultation.Infrastructure.Services.AuthService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IDocumentService, PublicConsultation.Infrastructure.Services.DocumentService>();
+builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IEmailService, PublicConsultation.Infrastructure.Services.EmailService>();
 builder.Services.AddControllers();
 
 var app = builder.Build();
