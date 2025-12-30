@@ -1,0 +1,103 @@
+@page "/citizen/dashboard"
+@attribute [Authorize(Roles = "Citizen")]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Citizen Dashboard</MudText>
+
+    <MudGrid>
+        <MudItem xs="12">
+            <MudAlert Severity="Severity.Success" Variant="Variant.Filled" Class="mb-4">
+                Welcome back, <strong>@_fullName</strong>! Thank you for your continued participation in public
+                consultations.
+            </MudAlert>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full" Elevation="4"
+                Style="height:140px; border-top: 5px solid #594AE2;">
+                <MudIcon Icon="@Icons.Material.Filled.RateReview" Color="Color.Primary" Size="Size.Large"
+                    Class="mb-2" />
+                <MudText Typo="Typo.h5">@_myOpinionCount</MudText>
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Opinions Submitted</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full" Elevation="4"
+                Style="height:140px; border-top: 5px solid #26A69A;">
+                <MudIcon Icon="@Icons.Material.Filled.DynamicFeed" Color="Color.Success" Size="Size.Large"
+                    Class="mb-2" />
+                <MudText Typo="Typo.h5">@_activeConsultationsCount</MudText>
+                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Active Consultations</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="12">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-4">My Recent Submissions</MudText>
+                @if (_myOpinions == null || !_myOpinions.Any())
+                {
+                    <MudAlert Severity="Severity.Info">You haven't submitted any opinions yet. View active consultations to
+                        get started!</MudAlert>
+                }
+                else
+                {
+                    <MudTable Items="@_myOpinions" Hover="true" Dense="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Consultation</MudTh>
+                            <MudTh>Rule</MudTh>
+                            <MudTh>Date</MudTh>
+                            <MudTh>Status</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Consultation">@context.Rule?.DraftDocument?.Title</MudTd>
+                            <MudTd DataLabel="Rule">@context.Rule?.RuleNumber</MudTd>
+                            <MudTd DataLabel="Date">@context.CreatedDate.ToShortDateString()</MudTd>
+                            <MudTd DataLabel="Status">
+                                <MudChip T="string" Color="Color.Success" Size="Size.Small">Submitted</MudChip>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private string _fullName = "";
+    private int _myOpinionCount;
+    private int _activeConsultationsCount;
+    private List<Opinion> _myOpinions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _fullName = user.Identity?.Name ?? "Citizen";
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = user.FindFirst("UserId");
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var uid))
+            {
+                _myOpinionCount = await DbContext.Opinions.CountAsync(o => o.UserId == uid);
+                _myOpinions = await DbContext.Opinions
+                .Include(o => o.Rule)
+                .ThenInclude(r => r.DraftDocument)
+                .Where(o => o.UserId == uid)
+                .OrderByDescending(o => o.CreatedDate)
+                .Take(10)
+                .ToListAsync();
+            }
+        }
+
+        _activeConsultationsCount = await DbContext.DraftDocuments.CountAsync(d => d.Status == "Published");
+    }
+}

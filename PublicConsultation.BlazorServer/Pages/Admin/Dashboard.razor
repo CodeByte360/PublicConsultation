@@ -1,0 +1,126 @@
+@page "/admin/dashboard"
+@attribute [Authorize(Roles = "Admin")]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" GutterBottom="true">Admin Dashboard</MudText>
+
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full" Elevation="4"
+                Style="height:120px; background-color: #594AE2; color: white;">
+                <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Large" Class="mb-2" />
+                <MudText Typo="Typo.h6">@_totalUsers Citizens</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full" Elevation="4"
+                Style="height:120px; background-color: #FF7043; color: white;">
+                <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Large" Class="mb-2" />
+                <MudText Typo="Typo.h6">@_totalDocs Documents</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full" Elevation="4"
+                Style="height:120px; background-color: #26A69A; color: white;">
+                <MudIcon Icon="@Icons.Material.Filled.Comment" Size="Size.Large" Class="mb-2" />
+                <MudText Typo="Typo.h6">@_totalOpinions Opinions</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 d-flex flex-column align-center justify-center mud-width-full" Elevation="4"
+                Style="height:120px; background-color: #EC407A; color: white;">
+                <MudIcon Icon="@Icons.Material.Filled.PublishedWithChanges" Size="Size.Large" Class="mb-2" />
+                <MudText Typo="Typo.h6">@_activeConsultations Active</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-4" Elevation="2" Style="height: 400px;">
+                <MudText Typo="Typo.h6" Class="mb-4">Recent Opinions</MudText>
+                @if (_recentOpinions == null || !_recentOpinions.Any())
+                {
+                    <MudText Typo="Typo.body2">No recent opinions yet.</MudText>
+                }
+                else
+                {
+                    <MudList T="string">
+                        @foreach (var op in _recentOpinions)
+                        {
+                            <MudListItem>
+                                <AvatarContent>
+                                    <MudAvatar Color="Color.Primary" Size="Size.Small">@op.User?.Username?.Substring(0,
+                                1).ToUpper()</MudAvatar>
+                                </AvatarContent>
+                                <ChildContent>
+                                    <div class="d-flex justify-space-between align-center">
+                                        <div>
+                                            <MudText Typo="Typo.body1"><strong>@op.User?.FullNameEnglish</strong> on
+                                                <em>@op.Rule?.SectionTitle</em></MudText>
+                                            <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 400px;">
+                                                @op.OpinionText</MudText>
+                                        </div>
+                                        <MudText Typo="Typo.caption">@op.CreatedDate.ToShortDateString()</MudText>
+                                    </div>
+                                </ChildContent>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="2" Style="height: 400px;">
+                <MudText Typo="Typo.h6" Class="mb-4">Document Status</MudText>
+                <MudChart ChartType="ChartType.Donut" InputData="@_docStatusData" InputLabels="@_docStatusLabels"
+                    Width="200px" Height="200px" />
+                <div class="mt-4">
+                    <div class="d-flex justify-space-between">
+                        <MudText Typo="Typo.body2">Draft</MudText>
+                        <MudText Typo="Typo.body2">@_draftCount</MudText>
+                    </div>
+                    <div class="d-flex justify-space-between">
+                        <MudText Typo="Typo.body2">Published</MudText>
+                        <MudText Typo="Typo.body2">@_publishedCount</MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private int _totalUsers;
+    private int _totalDocs;
+    private int _totalOpinions;
+    private int _activeConsultations;
+    private int _draftCount;
+    private int _publishedCount;
+
+    private List<Opinion> _recentOpinions = new();
+    private double[] _docStatusData = new double[2];
+    private string[] _docStatusLabels = { "Draft", "Published" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _totalUsers = await DbContext.UserAccounts.CountAsync(u => u.Role.Name == "Citizen");
+        _totalDocs = await DbContext.DraftDocuments.CountAsync();
+        _totalOpinions = await DbContext.Opinions.CountAsync();
+        _activeConsultations = await DbContext.DraftDocuments.CountAsync(d => d.Status == "Published");
+
+        _draftCount = await DbContext.DraftDocuments.CountAsync(d => d.Status == "Draft");
+        _publishedCount = await DbContext.DraftDocuments.CountAsync(d => d.Status == "Published");
+        _docStatusData = new double[] { _draftCount, _publishedCount };
+
+        _recentOpinions = await DbContext.Opinions
+        .Include(o => o.User)
+        .Include(o => o.Rule)
+        .OrderByDescending(o => o.CreatedDate)
+        .Take(5)
+        .ToListAsync();
+    }
+}

@@ -1,9 +1,74 @@
 ﻿@page "/"
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
+@using System.Security.Claims
 
-<PageTitle>Index</PageTitle>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
+    <div class="d-flex flex-column align-center justify-center py-16"
+        style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; border-radius: 20px;">
+        <MudText Typo="Typo.h2" Align="Align.Center" Class="font-weight-bold mb-4">Digital Public Consultation System
+        </MudText>
+        <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-8" Style="max-width: 800px; opacity: 0.9;">
+            Participate in the legislative process. Share your feedback on draft laws and regulations to build a better
+            future together.
+        </MudText>
+        <div class="d-flex gap-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Large" Href="/active-consultations"
+                EndIcon="@Icons.Material.Filled.ArrowForward">Browse Consultations</MudButton>
+            <AuthorizeView>
+                <NotAuthorized>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Large" Href="/login">Sign In
+                        to Participate</MudButton>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
 
-<h1>Hello, world!</h1>
+    <MudGrid Class="mt-16">
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="4" Class="pa-6 rounded-lg h-100">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Color="Color.Primary" Size="Size.Large" Class="mb-4" />
+                <MudText Typo="Typo.h6" GutterBottom="true">Transparency</MudText>
+                <MudText Typo="Typo.body2">View upcoming legislative drafts and understand how they impact you before
+                    they become law.</MudText>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="4" Class="pa-6 rounded-lg h-100">
+                <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Secondary" Size="Size.Large" Class="mb-4" />
+                <MudText Typo="Typo.h6" GutterBottom="true">Public Voice</MudText>
+                <MudText Typo="Typo.body2">Your opinions are collected and analyzed using AI to ensure every unique
+                    perspective is considered by the Ministry.</MudText>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="4" Class="pa-6 rounded-lg h-100">
+                <MudIcon Icon="@Icons.Material.Filled.Assessment" Color="Color.Success" Size="Size.Large"
+                    Class="mb-4" />
+                <MudText Typo="Typo.h6" GutterBottom="true">Accountability</MudText>
+                <MudText Typo="Typo.body2">The system generates comparative statements showing user feedback vs.
+                    existing law for full accountability.</MudText>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
 
-Welcome to your new app.
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            if (user.IsInRole("Admin"))
+            {
+                NavigationManager.NavigateTo("/admin/dashboard");
+            }
+            else if (user.IsInRole("Citizen"))
+            {
+                NavigationManager.NavigateTo("/citizen/dashboard");
+            }
+        }
+    }
+}
