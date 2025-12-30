@@ -35,13 +35,19 @@
             </MudTd>
             <MudTd DataLabel="Actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
-                    Href="@($"/admin/documents/{context.Id}")" />
+                    Href="@($"/admin/documents/{context.Id}")" Tooltip="Edit Details" />
                 @if (context.Status == "Draft")
                 {
                     <MudIconButton Icon="@Icons.Material.Filled.Publish" Color="Color.Success" Size="Size.Small"
-                        OnClick="@(() => PublishQuick(context))" />
+                        OnClick="@(() => PublishQuick(context))" Tooltip="Quick Publish" />
                 }
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" />
+                @if (context.Status == "Published" || context.Status == "Closed")
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Assessment" Color="Color.Secondary" Size="Size.Small"
+                        Href="@($"/admin/reports/comparative/{context.Id}")" Tooltip="View Comparative Statement" />
+                }
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                    Tooltip="Delete" />
             </MudTd>
         </RowTemplate>
     </MudTable>

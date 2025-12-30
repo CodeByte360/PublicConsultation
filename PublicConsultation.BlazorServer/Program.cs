@@ -34,6 +34,7 @@ builder.Services.AddMudServices();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAuthService, PublicConsultation.Infrastructure.Services.AuthService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IDocumentService, PublicConsultation.Infrastructure.Services.DocumentService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IEmailService, PublicConsultation.Infrastructure.Services.EmailService>();
+builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAiAnalysisService, PublicConsultation.Infrastructure.Services.AiAnalysisService>();
 builder.Services.AddControllers();
 
 var app = builder.Build();

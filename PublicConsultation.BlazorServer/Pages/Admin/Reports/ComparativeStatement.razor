@@ -1,70 +1,164 @@
 @page "/admin/reports/comparative/{DocumentId:guid}"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "Admin,Official")]
 @using PublicConsultation.Core.Entities
-@using PublicConsultation.Core.Interfaces
 @using PublicConsultation.Infrastructure.Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
 @inject ApplicationDbContext DbContext
 @inject IAiAnalysisService AiService
+@inject IJSRuntime JSRuntime
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 no-print">
+    <div class="d-flex justify-space-between align-center mb-6">
+        <div>
+            <MudText Typo="Typo.h4">Comparative Statement</MudText>
+            <MudText Typo="Typo.subtitle1">@_document?.Title</MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print"
+            OnClick="PrintReport">Print / Export PDF</MudButton>
+    </div>
+
     @if (_loading)
     {
         <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-        <MudText>Generating AI Analysis...</MudText>
+        <MudText>Generating Comprehensive AI Analysis...</MudText>
     }
     else if (_document != null)
     {
-        <MudText Typo="Typo.h4" GutterBottom="true">Comparative Statement</MudText>
-        <MudText Typo="Typo.h6">@_document.Title</MudText>
-        <MudText Typo="Typo.subtitle1" Class="mb-4">@_document.MinistryOrDepartment</MudText>
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" md="3">
+                <MudPaper Class="pa-4 text-center h-100" Elevation="2">
+                    <MudText Typo="Typo.h6">Total Opinions</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">@_totalOpinions</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudPaper Class="pa-4 text-center h-100" Elevation="2">
+                    <MudText Typo="Typo.h6">Global Sentiment</MudText>
+                    <MudChip T="string" Color="@GetSentimentColor(_globalSentiment)" Size="Size.Large">@_globalSentiment
+                    </MudChip>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4 h-100" Elevation="2">
+                    <MudText Typo="Typo.h6">Key Public Concerns</MudText>
+                    @if (_globalThemes.Any())
+                    {
+                        @foreach (var theme in _globalThemes)
+                        {
+                            <MudChip T="string" Variant="Variant.Text" Color="Color.Secondary">@theme</MudChip>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2">No dominant themes detected.</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
 
-        <MudTable Items="@_reportRows" Hover="true" Bordered="true" Striped="true" Elevation="4">
+        <MudTable Items="@_reportRows" Hover="true" Bordered="true" Striped="true" Elevation="4" Dense="true">
             <HeaderContent>
-                <MudTh>Rule / Section</MudTh>
+                <MudTh Style="width: 100px;">Section</MudTh>
                 <MudTh>Existing Provision</MudTh>
                 <MudTh>Proposed Provision</MudTh>
-                <MudTh Style="background-color: #e8f5e9;">Public Opinion Summary (AI)</MudTh>
-                <MudTh>Remarks / Decision</MudTh>
+                <MudTh Style="background-color: #fafafa;">Public Feedback (AI Analysis)</MudTh>
+                <MudTh>Recommendation</MudTh>
+                <MudTh Class="no-print">Ref. Opinions</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Section">
                     <b>@context.Rule.RuleNumber</b><br />
-                    @context.Rule.SectionTitle
+                    <MudText Typo="Typo.caption">@context.Rule.SectionTitle</MudText>
                 </MudTd>
-                <MudTd DataLabel="Existing">@context.Rule.ExistingProvision</MudTd>
-                <MudTd DataLabel="Proposed">@context.Rule.ProposedProvision</MudTd>
-                <MudTd DataLabel="Summary" Style="background-color: #f1f8e9;">
+                <MudTd DataLabel="Existing">
+                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@context.Rule.ExistingProvision</MudText>
+                </MudTd>
+                <MudTd DataLabel="Proposed">
+                    <MudText Typo="Typo.body2" Style="white-space: pre-wrap;">@context.Rule.ProposedProvision</MudText>
+                </MudTd>
+                <MudTd DataLabel="Analysis" Style="background-color: #fdfdfd;">
                     @if (context.IsProcessing)
                     {
                         <MudProgressLinear Color="Color.Success" Indeterminate="true" />
                     }
                     else
                     {
-                        @context.AiSummary
+                        <div class="d-flex align-center mb-2">
+                            <MudChip T="string" Size="Size.Small" Color="@GetSentimentColor(context.Analysis?.Sentiment)"
+                                Class="mr-2">@context.Analysis?.Sentiment</MudChip>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Opinions.Count feedback(s)</MudText>
+                        </div>
+                        <MudText Typo="Typo.body2">@context.Analysis?.Summary</MudText>
+                        @if (context.Analysis?.KeyThemes.Any() == true)
+                        {
+                            <div class="mt-2">
+                                @foreach (var t in context.Analysis.KeyThemes)
+                                {
+                                    <span class="mud-typography mud-typography-caption px-1 mr-1"
+                                        style="background:#eee; border-radius:4px;">#@t</span>
+                                }
+                            </div>
+                        }
                     }
                 </MudTd>
-                <MudTd DataLabel="Remarks">
-                    <MudTextField T="string" Variant="Variant.Outlined" Lines="3" Placeholder="Official remarks..." />
+                <MudTd DataLabel="Recommendation">
+                    <MudText Typo="Typo.body2"><b>@context.Analysis?.Recommendation</b></MudText>
+                    <MudTextField T="string" Variant="Variant.Text" Margin="Margin.Dense"
+                        Placeholder="Add final decision..." Class="mt-2 no-print" />
+                </MudTd>
+                <MudTd Class="no-print">
+                    <MudTooltip Text="View raw opinions">
+                        <MudIconButton Icon="@Icons.Material.Filled.List" Size="Size.Small" />
+                    </MudTooltip>
                 </MudTd>
             </RowTemplate>
         </MudTable>
     }
 </MudContainer>
 
+<style>
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+
+        .mud-container {
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .mud-paper {
+            box-shadow: none !important;
+            border: 1px solid #eee;
+        }
+
+        .mud-table-container {
+            overflow: visible !important;
+        }
+
+        body {
+            background-color: white !important;
+        }
+    }
+</style>
+
 @code {
     [Parameter] public Guid DocumentId { get; set; }
 
-    private DraftDocument _document;
+    private DraftDocument? _document;
     private List<ReportRow> _reportRows = new();
     private bool _loading = true;
+    private int _totalOpinions = 0;
+    private string _globalSentiment = "Neutral";
+    private List<string> _globalThemes = new();
 
     private class ReportRow
     {
-        public Rule Rule { get; set; }
-        public List<Opinion> Opinions { get; set; }
-        public string AiSummary { get; set; }
+        public Rule Rule { get; set; } = null!;
+        public List<Opinion> Opinions { get; set; } = new();
+        public AnalysisResultDto? Analysis { get; set; }
         public bool IsProcessing { get; set; }
     }
 
@@ -84,6 +178,8 @@
             .Where(o => o.Rule.DraftDocumentId == DocumentId)
             .ToListAsync();
 
+            _totalOpinions = allOpinions.Count;
+
             foreach (var rule in rules)
             {
                 var row = new ReportRow
@@ -96,10 +192,10 @@
             }
 
             _loading = false;
-            StateHasChanged(); // Render table first
+            StateHasChanged();
 
-            // Process AI Summaries in parallel (simulated)
             await ProcessAiSummaries();
+            CalculateGlobalMetrics();
         }
     }
 
@@ -107,10 +203,39 @@
     {
         foreach (var row in _reportRows)
         {
-            row.AiSummary = await AiService.SummarizeOpinionsAsync(row.Opinions);
+            row.Analysis = await AiService.AnalyzeBatchAsync(row.Opinions);
             row.IsProcessing = false;
             StateHasChanged();
-            await Task.Delay(500); // Simulate processing delay for visual effect
+            await Task.Delay(200);
         }
+    }
+
+    private void CalculateGlobalMetrics()
+    {
+        _globalThemes = _reportRows.Where(r => r.Analysis != null)
+        .SelectMany(r => r.Analysis!.KeyThemes)
+        .GroupBy(t => t)
+        .OrderByDescending(g => g.Count())
+        .Take(5)
+        .Select(g => g.Key)
+        .ToList();
+
+        var sentiments = _reportRows.Where(r => r.Analysis != null).Select(r => r.Analysis!.Sentiment).ToList();
+        if (sentiments.Count(s => s == "Negative") > sentiments.Count / 3) _globalSentiment = "Negative";
+        else if (sentiments.Count(s => s == "Positive") > sentiments.Count / 2) _globalSentiment = "Positive";
+        else _globalSentiment = "Mixed";
+    }
+
+    private Color GetSentimentColor(string? s) => s switch
+    {
+        "Positive" => Color.Success,
+        "Negative" => Color.Error,
+        "Mixed" => Color.Warning,
+        _ => Color.Default
+    };
+
+    private async Task PrintReport()
+    {
+        await JSRuntime.InvokeVoidAsync("window.print");
     }
 }
