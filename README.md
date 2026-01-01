@@ -109,4 +109,3 @@ graph TD
 - **`ComparativeStatement.razor`**: The most critical page for officials—the aggregation of all legal and public data.
 
 ---
-*Empowering Governance through AI and Transparency.*
