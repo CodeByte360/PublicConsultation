@@ -1,10 +1,6 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PublicConsultation.Infrastructure.Data;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace PublicConsultation.BlazorServer.Controllers;
 
