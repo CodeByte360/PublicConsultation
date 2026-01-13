@@ -33,11 +33,17 @@
             <MudTd DataLabel="Verified">
                 @if (context.IsVerified)
                 {
-                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                    <MudTooltip Text="Click to Unverify">
+                        <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success"
+                            OnClick="@(() => ToggleVerification(context))" />
+                    </MudTooltip>
                 }
                 else
                 {
-                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" />
+                    <MudTooltip Text="Click to Verify">
+                        <MudIconButton Icon="@Icons.Material.Filled.Cancel" Color="Color.Error"
+                            OnClick="@(() => ToggleVerification(context))" />
+                    </MudTooltip>
                 }
             </MudTd>
         </RowTemplate>
@@ -69,6 +75,37 @@
         if (!result.Canceled)
         {
             await LoadUsers();
+        }
+    }
+
+    private async Task ToggleVerification(UserAccount user)
+    {
+        var parameters = new DialogParameters { ["User"] = user };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+        var dialog = DialogService.Show<VerificationDialog>(
+        user.IsVerified ? "Unverify User?" : "Verify User Identity",
+        parameters,
+        options);
+
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var originalStatus = user.IsVerified;
+            user.IsVerified = !user.IsVerified;
+
+            try
+            {
+                DbContext.UserAccounts.Update(user);
+                await DbContext.SaveChangesAsync();
+                Snackbar.Add($"User {(user.IsVerified ? "verified" : "unverified")} successfully.", Severity.Success);
+            }
+            catch (Exception ex)
+            {
+                user.IsVerified = originalStatus; // Revert on failure
+                Snackbar.Add($"Error updating user verification: {ex.Message}", Severity.Error);
+            }
         }
     }
 }
