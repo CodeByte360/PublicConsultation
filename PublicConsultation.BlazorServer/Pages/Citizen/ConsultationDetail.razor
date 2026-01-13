@@ -23,8 +23,12 @@
                     <MudText Typo="Typo.h4">@_document.Title</MudText>
                     <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@_document.MinistryOrDepartment</MudText>
                 </div>
-                <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.Download"
-                    Href="@($"/documents/download/{Id}")" target="_blank">View Original PDF / Document</MudButton>
+                <div class="d-flex gap-2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.Download"
+                        Href="@($"/documents/download/{Id}")" target="_blank">View PDF</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Chat"
+                        OnClick="OpenChatbot">Ask AI Assistant</MudButton>
+                </div>
             </div>
             <MudText Typo="Typo.body1" Class="mt-4">@_document.Description</MudText>
             <MudDivider Class="my-4" />
@@ -39,11 +43,9 @@
             <MudPaper Class="pa-4 mb-4 border-l-4 border-solid border-primary" Elevation="2">
                 <div class="d-flex justify-space-between">
                     <MudText Typo="Typo.h6">Rule @rule.RuleNumber: @rule.SectionTitle</MudText>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="@(HasSubmitted(rule.Id) ? Color.Success : Color.Primary)" 
-                               StartIcon="@(HasSubmitted(rule.Id) ? Icons.Material.Filled.Check : Icons.Material.Filled.Comment)"
-                               Disabled="@HasSubmitted(rule.Id)"
-                               OnClick="@(() => OpenOpinionDialog(rule))">
+                    <MudButton Variant="Variant.Filled" Color="@(HasSubmitted(rule.Id) ? Color.Success : Color.Primary)"
+                        StartIcon="@(HasSubmitted(rule.Id) ? Icons.Material.Filled.Check : Icons.Material.Filled.Comment)"
+                        Disabled="@HasSubmitted(rule.Id)" OnClick="@(() => OpenOpinionDialog(rule))">
                         @(HasSubmitted(rule.Id) ? "Submitted" : "Give Opinion")
                     </MudButton>
                 </div>
@@ -130,5 +132,12 @@
             Snackbar.Add("Opinion Submitted Successfully!", Severity.Success);
             await LoadData(); // Refresh to disable the button
         }
+    }
+
+    private async Task OpenChatbot()
+    {
+        var parameters = new DialogParameters { ["DocumentId"] = Id };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        DialogService.Show<LegalChatbot>("Legal Q&A Assistant", parameters, options);
     }
 }

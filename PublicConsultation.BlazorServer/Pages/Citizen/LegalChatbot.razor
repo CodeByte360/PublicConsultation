@@ -1,0 +1,81 @@
+@using PublicConsultation.Core.Interfaces
+@inject IAiAnalysisService AiService
+
+<MudDialog>
+    <DialogContent>
+        <div style="height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;" class="mb-4">
+            <div class="pa-3 mud-alert-info mud-elevation-1 rounded">
+                <MudText Typo="Typo.body2">Hello! I am your Legal Assistant. Ask me anything about this draft document.
+                </MudText>
+            </div>
+
+            @foreach (var msg in _messages)
+            {
+                <div class="pa-3 mud-elevation-1 rounded @(msg.IsUser ? "mud-theme-primary align-self-end" : "mud-alert-success align-self-start")"
+                    style="max-width: 80%; @(msg.IsUser ? "color: white;" : "")">
+                    <MudText Typo="Typo.body2">@((MarkupString)msg.Text.Replace("\n", "<br/>"))</MudText>
+                    </div>
+            }
+
+            @if (_isThinking)
+            {
+                <div class="pa-3 mud-alert-success align-self-start mud-elevation-1 rounded" style="max-width: 80%;">
+                    <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="mt-1" />
+                </div>
+            }
+        </div>
+
+        <div class="d-flex align-center">
+            <MudTextField T="string" @bind-Value="_currentQuestion" Placeholder="Ask a question..."
+                OnKeyDown="@HandleKeyDown" Immediate="true" Variant="Variant.Outlined" Adornment="Adornment.End"
+                AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="AskQuestion" />
+        </div>
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [Parameter] public Guid DocumentId { get; set; }
+
+    private string _currentQuestion = "";
+    private List<ChatMessage> _messages = new();
+    private bool _isThinking = false;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await AskQuestion();
+        }
+    }
+
+    private async Task AskQuestion()
+    {
+        if (string.IsNullOrWhiteSpace(_currentQuestion)) return;
+
+        var userMsg = _currentQuestion;
+        _messages.Add(new ChatMessage { Text = userMsg, IsUser = true });
+        _currentQuestion = "";
+        _isThinking = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await AiService.AnswerQuestionAsync(DocumentId, userMsg);
+            _messages.Add(new ChatMessage { Text = response, IsUser = false });
+        }
+        catch (Exception ex)
+        {
+            _messages.Add(new ChatMessage { Text = "Sorry, I encountered an error: " + ex.Message, IsUser = false });
+        }
+        finally
+        {
+            _isThinking = false;
+        }
+    }
+
+    public class ChatMessage
+    {
+        public string Text { get; set; } = "";
+        public bool IsUser { get; set; }
+    }
+}

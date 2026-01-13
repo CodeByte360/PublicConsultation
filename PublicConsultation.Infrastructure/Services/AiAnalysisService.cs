@@ -1,8 +1,11 @@
 #nullable enable
 using PublicConsultation.Core.Entities;
 using PublicConsultation.Core.Interfaces;
+using PublicConsultation.Infrastructure.Data;
 using Microsoft.ML;
 using Microsoft.ML.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace PublicConsultation.Infrastructure.Services;
 
@@ -11,9 +14,11 @@ public class AiAnalysisService : IAiAnalysisService
     private static MLContext _mlContext = new MLContext();
     private static ITransformer? _model;
     private static PredictionEngine<SentimentData, SentimentPrediction>? _predictionEngine;
+    private readonly IServiceProvider _serviceProvider;
 
-    public AiAnalysisService()
+    public AiAnalysisService(IServiceProvider serviceProvider)
     {
+        _serviceProvider = serviceProvider;
         InitializeModel();
     }
 
@@ -25,7 +30,7 @@ public class AiAnalysisService : IAiAnalysisService
         {
             if (_model != null) return;
 
-            // 1. Prepare Training Data (Balanced and more comprehensive)
+            // 1. Prepare Training Data
             var trainingData = new List<SentimentData>
             {
                 // Positive
@@ -155,11 +160,39 @@ public class AiAnalysisService : IAiAnalysisService
         var count = opinions.Count;
         var text = string.Join(". ", opinions.Select(o => o.OpinionText));
 
-        // Simple extractive: find the shortest sentence that contains a key theme or just the first sentence
+        // Simple extractive
         var sentences = text.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries);
         var mainPoint = sentences.FirstOrDefault()?.Trim() ?? "Feedback received.";
 
         return Task.FromResult($"Analysis of {count} submission(s): {mainPoint}");
+    }
+
+    public async Task<string> AnswerQuestionAsync(Guid documentId, string question)
+    {
+        if (string.IsNullOrWhiteSpace(question)) return "Please ask a question.";
+
+        using var scope = _serviceProvider.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var rules = await dbContext.Rules
+            .Where(r => r.DraftDocumentId == documentId)
+            .ToListAsync();
+
+        // Simple keyword-based retrieval
+        var keywords = question.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 3).ToList();
+
+        var bestMatch = rules
+            .Select(r => new { Rule = r, Score = keywords.Count(k => r.ProposedProvision.ToLower().Contains(k) || r.SectionTitle.ToLower().Contains(k)) })
+            .OrderByDescending(x => x.Score)
+            .FirstOrDefault();
+
+        if (bestMatch == null || bestMatch.Score == 0)
+        {
+            return "I couldn't find a specific section related to your question in this draft. Could you try rephrasing?";
+        }
+
+        return $"Based on **Section {bestMatch.Rule.RuleNumber}: {bestMatch.Rule.SectionTitle}**, the provision states: \"{bestMatch.Rule.ProposedProvision}\". \n\nDoes this help with your question?";
     }
 
     public class SentimentData

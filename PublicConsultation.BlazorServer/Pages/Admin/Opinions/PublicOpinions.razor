@@ -30,6 +30,39 @@
         </MudGrid>
     </MudPaper>
 
+    <MudGrid Class="mb-6">
+        <MudItem xs="12" md="4">
+            <MudAlert Severity="@GetAggregateSeverity()" Variant="Variant.Filled"
+                ContentAlignment="HorizontalAlignment.Center" Class="py-6">
+                <MudText Typo="Typo.h6">Overall Sentiment: @GetAggregateSentiment()</MudText>
+            </MudAlert>
+        </MudItem>
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-4 d-flex align-center justify-space-around" Style="height: 100%;">
+                <div class="text-center">
+                    <MudText Typo="Typo.h5" Color="Color.Success"><b>@_filteredOpinions.Count(o => o.Sentiment ==
+                            "Positive")</b></MudText>
+                    <MudText Typo="Typo.caption">Positive</MudText>
+                </div>
+                <div class="text-center">
+                    <MudText Typo="Typo.h5" Color="Color.Error"><b>@_filteredOpinions.Count(o => o.Sentiment ==
+                            "Negative")</b></MudText>
+                    <MudText Typo="Typo.caption">Negative</MudText>
+                </div>
+                <div class="text-center">
+                    <MudText Typo="Typo.h5" Color="Color.Warning"><b>@_filteredOpinions.Count(o => o.Sentiment ==
+                            "Mixed")</b></MudText>
+                    <MudText Typo="Typo.caption">Mixed</MudText>
+                </div>
+                <div class="text-center">
+                    <MudText Typo="Typo.h5"><b>@_filteredOpinions.Count(o => string.IsNullOrEmpty(o.Sentiment) ||
+                            o.Sentiment == "Neutral")</b></MudText>
+                    <MudText Typo="Typo.caption">Neutral</MudText>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
     <MudTable Items="@_filteredOpinions" Hover="true" Bordered="true" Striped="true" Loading="@_loading" Elevation="4">
         <HeaderContent>
             <MudTh>Date</MudTh>
@@ -42,7 +75,16 @@
         <RowTemplate>
             <MudTd DataLabel="Date">@context.CreatedDate.ToShortDateString()</MudTd>
             <MudTd DataLabel="Citizen">
-                <b>@context.User?.FullNameEnglish</b><br />
+                <div class="d-flex align-center">
+                    <b>@context.User?.FullNameEnglish</b>
+                    @if (context.User?.IsVerified == true)
+                    {
+                        <MudTooltip Text="Verified Citizen">
+                            <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Info" Size="Size.Small"
+                                Class="ml-1" />
+                        </MudTooltip>
+                    }
+                </div>
                 <MudText Typo="Typo.caption">@context.User?.Email</MudText>
             </MudTd>
             <MudTd DataLabel="Section">
@@ -125,5 +167,24 @@
         "Negative" => Color.Error,
         "Mixed" => Color.Warning,
         _ => Color.Default
+    };
+
+    private string GetAggregateSentiment()
+    {
+        if (!_filteredOpinions.Any()) return "No Data";
+        var pos = _filteredOpinions.Count(o => o.Sentiment == "Positive");
+        var neg = _filteredOpinions.Count(o => o.Sentiment == "Negative");
+        if (pos > neg * 1.5) return "Mostly Positive";
+        if (neg > pos * 1.5) return "Highly Critical";
+        if (pos > 0 && neg > 0) return "Mixed Feedback";
+        return "Neutral / Balanced";
+    }
+
+    private Severity GetAggregateSeverity() => GetAggregateSentiment() switch
+    {
+        "Mostly Positive" => Severity.Success,
+        "Highly Critical" => Severity.Error,
+        "Mixed Feedback" => Severity.Warning,
+        _ => Severity.Normal
     };
 }

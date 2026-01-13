@@ -35,6 +35,7 @@ builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAuthService, Publ
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IDocumentService, PublicConsultation.Infrastructure.Services.DocumentService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IEmailService, PublicConsultation.Infrastructure.Services.EmailService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAiAnalysisService, PublicConsultation.Infrastructure.Services.AiAnalysisService>();
+builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IDuplicateDetectionService, PublicConsultation.Infrastructure.Services.DuplicateDetectionService>();
 builder.Services.AddControllers();
 
 var app = builder.Build();

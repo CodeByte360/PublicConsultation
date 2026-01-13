@@ -1,14 +1,28 @@
 @using PublicConsultation.Core.Entities
 @using PublicConsultation.Infrastructure.Data
+@using PublicConsultation.Core.Interfaces
 @inject ApplicationDbContext DbContext
+@inject IDuplicateDetectionService DuplicateService
 
 <MudDialog>
     <DialogContent>
         <MudText Typo="Typo.body1" Class="mb-4">You are submitting an opinion for <b>Rule @RuleNumber</b>.</MudText>
         <MudForm @ref="form" @bind-IsValid="@success">
-            <MudTextField Label="Your Opinion / Feedback" @bind-Value="model.OpinionText" Lines="4" Required="true"
-                RequiredError="Opinion is required." />
-            <MudTextField Label="Suggested Alternative (Optional)" @bind-Value="model.Suggestion" Lines="3" />
+            <MudTextField Label="Your Opinion / Feedback" Value="model.OpinionText"
+                ValueChanged="@((string val) => OnTextChanged(val))" Lines="4" Required="true"
+                RequiredError="Opinion is required." Immediate="true" />
+
+            @if (_isDuplicateDetected)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Class="mt-2"
+                    Icon="@Icons.Material.Filled.Warning">
+                    Note: A similar opinion has already been submitted for this rule. You can still submit if your point is
+                    unique.
+                </MudAlert>
+            }
+
+            <MudTextField @bind-Value="model.Suggestion" Label="Suggested Alternative (Optional)" Lines="3"
+                Class="mt-4" />
         </MudForm>
     </DialogContent>
     <DialogActions>
@@ -27,6 +41,28 @@
     private MudForm form;
     private bool success;
     private Opinion model = new Opinion();
+    private bool _isDuplicateDetected = false;
+    private System.Threading.Timer? _debounceTimer;
+
+    private async Task OnTextChanged(string val)
+    {
+        model.OpinionText = val;
+        _isDuplicateDetected = false;
+
+        if (string.IsNullOrWhiteSpace(val) || val.Length < 10) return;
+
+        // Debounce logic
+        _debounceTimer?.Dispose();
+        _debounceTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+    {
+    var similar = await DuplicateService.FindSimilarOpinionsAsync(val, RuleId);
+    _isDuplicateDetected = similar.Any();
+    StateHasChanged();
+            });
+        }, null, 500, System.Threading.Timeout.Infinite);
+    }
 
     private void Cancel() => MudDialog.Cancel();
 
