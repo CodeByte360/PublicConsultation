@@ -5,31 +5,73 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
-    <MudPaper Class="pa-4">
-        <MudText Typo="Typo.h5" GutterBottom="true" Align="Align.Center">Create an Account</MudText>
-        <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
-            <MudTextField T="string" Label="Username" Required="true" RequiredError="Username is required!"
-            @bind-Value="registerModel.Username" />
-            <MudTextField T="string" Label="Email" Required="true" RequiredError="Email is required!"
-            @bind-Value="registerModel.Email" InputType="InputType.Email" />
-            <MudTextField T="string" Label="Password" Required="true" RequiredError="Password is required!"
-            @bind-Value="password" InputType="InputType.Password" />
-            <MudTextField T="string" Label="Confirm Password" Required="true"
-                RequiredError="Password Confirmation is required!" @bind-Value="confirmPassword"
-                InputType="InputType.Password" Validation="@(new Func<string, IEnumerable<string>>(PasswordMatch))" />
+<MudContainer MaxWidth="MaxWidth.Medium" Class="d-flex align-center justify-center mud-width-full" Style="min-height: 90vh;">
+    <MudCard Elevation="25" Class="pa-8 my-8" Style="width: 100%; border-radius: 12px;">
+        <MudCardHeader Class="d-flex justify-center flex-column align-center">
+            <CardHeaderContent>
+                 <div class="d-flex justify-center mb-4">
+                    <MudImage Src="images/logo.png" Height="60" Alt="Logo" />
+                </div>
+                <MudText Typo="Typo.h5" Align="Align.Center" Style="font-weight: 700; color: var(--mud-palette-primary);">Create an Account</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">Join the Digital Public Consultation System</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-1"><strong>Account Credentials</strong></MudText>
+                        <MudDivider Class="mb-4" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Username" Required="true" RequiredError="Username is required!"
+                                      @bind-Value="registerModel.Username" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"/>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Email" Required="true" RequiredError="Email is required!"
+                                      @bind-Value="registerModel.Email" InputType="InputType.Email" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"/>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Password" Required="true" RequiredError="Password is required!"
+                                      @bind-Value="password" InputType="InputType.Password" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"/>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Confirm Password" Required="true"
+                                      RequiredError="Password Confirmation is required!" @bind-Value="confirmPassword"
+                                      InputType="InputType.Password" Validation="@(new Func<string, IEnumerable<string>>(PasswordMatch))" 
+                                      Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.LockReset"/>
+                    </MudItem>
 
-            <MudTextField T="string" Label="Full Name (English)" @bind-Value="registerModel.FullNameEnglish" />
-            <MudTextField T="string" Label="Full Name (Bangla)" @bind-Value="registerModel.FullNameBangla" />
-            <MudTextField T="string" Label="Mobile Number" @bind-Value="registerModel.PhoneNumber" />
+                    <MudItem xs="12" Class="mt-4">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-1"><strong>Personal Information</strong></MudText>
+                        <MudDivider Class="mb-4" />
+                    </MudItem>
 
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Elevation="0" OnClick="Submit" Class="mt-4"
-                FullWidth="true" Disabled="@(!success)">Register</MudButton>
-        </MudForm>
-        <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-4">
-            Already have an account? <MudLink Href="/login">Login here</MudLink>
-        </MudText>
-    </MudPaper>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Full Name (English)" @bind-Value="registerModel.FullNameEnglish" Variant="Variant.Outlined"/>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Full Name (Bangla)" @bind-Value="registerModel.FullNameBangla" Variant="Variant.Outlined"/>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Mobile Number" @bind-Value="registerModel.PhoneNumber" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Phone"/>
+                    </MudItem>
+                    
+                     <MudItem xs="12" Class="d-flex justify-center mt-4">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Elevation="2" OnClick="Submit" Size="Size.Large"
+                                   FullWidth="true" Disabled="@(!success)" Class="py-2">Register</MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        </MudCardContent>
+        <MudCardActions Class="d-flex justify-center pb-4">
+             <MudText Typo="Typo.body2" Align="Align.Center">
+                Already have an account? <MudLink Href="/login" Color="Color.Primary" Style="font-weight: 600;">Login here</MudLink>
+            </MudText>
+        </MudCardActions>
+    </MudCard>
 </MudContainer>
 
 @code {

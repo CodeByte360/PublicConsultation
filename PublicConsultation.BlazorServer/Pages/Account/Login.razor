@@ -2,29 +2,54 @@
 @using Microsoft.AspNetCore.WebUtilities
 @inject NavigationManager NavigationManager
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
-    <MudPaper Class="pa-4">
-        <MudText Typo="Typo.h5" GutterBottom="true" Align="Align.Center">Login</MudText>
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center mud-width-full"
+    Style="min-height: 80vh;">
+    <MudCard Elevation="25" Class="pa-8" Style="width: 100%; border-radius: 12px;">
+        <MudCardHeader Class="d-flex justify-center flex-column align-center">
+            <CardHeaderContent>
+                <div class="d-flex justify-center mb-4">
+                    <MudImage Src="images/logo.png" Height="80" Alt="Logo" />
+                </div>
+                <MudText Typo="Typo.h5" Align="Align.Center"
+                    Style="font-weight: 700; color: var(--mud-palette-primary);">Welcome Back</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">Sign in to continue to DPCS
+                </MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@ErrorMessage</MudAlert>
+            }
 
-        @if (!string.IsNullOrEmpty(ErrorMessage))
-        {
-            <MudAlert Severity="Severity.Error" Class="mb-4">@ErrorMessage</MudAlert>
-        }
+            <form action="/account/login" method="post">
+                <MudTextField T="string" Label="Email" Name="email" Required="true" InputType="InputType.Email"
+                    Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
+                    Class="mb-4" />
 
-        <form action="/account/login" method="post">
-            <MudTextField T="string" Label="Email" Name="email" Required="true" InputType="InputType.Email" />
-            <MudTextField T="string" Label="Password" Name="password" Required="true" InputType="InputType.Password" />
+                <MudTextField T="string" Label="Password" Name="password" Required="true" InputType="InputType.Password"
+                    Variant="Variant.Outlined" Adornment="Adornment.Start"
+                    AdornmentIcon="@Icons.Material.Filled.Lock" />
 
-            <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+                <input type="hidden" name="returnUrl" value="@ReturnUrl" />
 
-            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="mt-4"
-                FullWidth="true">Login</MudButton>
-        </form>
+                <div class="d-flex justify-space-between align-center mt-2">
+                    <MudCheckBox T="bool" Label="Remember me" Color="Color.Primary" Dense="true" Class="ml-n2">
+                    </MudCheckBox>
+                    <MudLink Href="#">Forgot password?</MudLink>
+                </div>
 
-        <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-4">
-            Don't have an account? <MudLink Href="/register">Register here</MudLink>
-        </MudText>
-    </MudPaper>
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                    Size="Size.Large" Class="mt-6 py-2" FullWidth="true" Elevation="2">Login</MudButton>
+            </form>
+        </MudCardContent>
+        <MudCardActions Class="d-flex justify-center pb-4">
+            <MudText Typo="Typo.body2">
+                Don't have an account? <MudLink Href="/register" Color="Color.Primary" Style="font-weight: 600;">
+                    Register here</MudLink>
+            </MudText>
+        </MudCardActions>
+    </MudCard>
 </MudContainer>
 
 @code {

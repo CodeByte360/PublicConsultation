@@ -9,18 +9,14 @@
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
             OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h6" Class="ml-3">Digital Public Consultation System</MudText>
+        <MudImage Src="images/logo.png" Height="40" Class="ml-3 mr-3" />
+        <MudText Typo="Typo.h6">Digital Public Consultation System</MudText>
         <MudSpacer />
         <AuthorizeView>
             <Authorized>
                 <MudText Class="mr-4">Hello, @context.User.Identity?.Name</MudText>
                 <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="Logout">Logout</MudButton>
             </Authorized>
-            <NotAuthorized>
-                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login">Login</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Secondary" Class="ml-2" Href="/register">Register
-                </MudButton>
-            </NotAuthorized>
         </AuthorizeView>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
