@@ -17,6 +17,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<DraftDocument> DraftDocuments { get; set; }
     public DbSet<Rule> Rules { get; set; }
     public DbSet<Opinion> Opinions { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -40,17 +40,24 @@
                     <MudText Typo="Typo.h3" Color="Color.Primary">@_totalOpinions</MudText>
                 </MudPaper>
             </MudItem>
-            <MudItem xs="12" md="3">
+            <MudItem xs="12" md="4">
                 <MudPaper Class="pa-4 text-center h-100" Elevation="2">
-                    <MudText Typo="Typo.h6">Global Sentiment</MudText>
+                    <MudText Typo="Typo.h6">Public Sentiment</MudText>
                     <MudChip T="string" Color="@GetSentimentColor(_globalSentiment)" Size="Size.Large">@_globalSentiment
                     </MudChip>
                 </MudPaper>
             </MudItem>
-            <MudItem xs="12" md="6">
-                <MudPaper Class="pa-4 h-100" Elevation="2">
-                    <MudText Typo="Typo.h6">Key Public Concerns</MudText>
-                    @if (_globalThemes.Any())
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4 text-center h-100" Elevation="2">
+                    <MudText Typo="Typo.h6">Average Consensus Score</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Info">@(_avgConsensus.ToString("P0"))</MudText>
+                        <MudProgressLinear Color="Color.Info" Value="@(_avgConsensus * 100)" Class="mt-2" />
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-4 h-100" Elevation="2">
+                        <MudText Typo="Typo.h6">Key Public Concerns</MudText>
+                        @if (_globalThemes.Any())
                     {
                         @foreach (var theme in _globalThemes)
                         {
@@ -95,9 +102,16 @@
                         <div class="d-flex align-center mb-2">
                             <MudChip T="string" Size="Size.Small" Color="@GetSentimentColor(context.Analysis?.Sentiment)"
                                 Class="mr-2">@context.Analysis?.Sentiment</MudChip>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Opinions.Count feedback(s)</MudText>
+                            <MudTooltip Text="Consensus Score (Positive vs Total)">
+                                <div style="width: 100px;">
+                                    <MudProgressLinear Color="@GetSentimentColor(context.Analysis?.Sentiment)"
+                                        Value="@((context.Analysis?.ConsensusScore ?? 0) * 100)" Size="Size.Small" />
+                                </div>
+                            </MudTooltip>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-2">@context.Opinions.Count
+                                feedback(s)</MudText>
                         </div>
-                        <MudText Typo="Typo.body2">@context.Analysis?.Summary</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-2">@context.Analysis?.Summary</MudText>
                         @if (context.Analysis?.KeyThemes.Any() == true)
                         {
                             <div class="mt-2">
@@ -180,6 +194,7 @@
     private int _totalOpinions = 0;
     private string _globalSentiment = "Neutral";
     private List<string> _globalThemes = new();
+    private double _avgConsensus = 0;
 
     private class ReportRow
     {
@@ -252,6 +267,12 @@
         if (sentiments.Count(s => s == "Negative") > sentiments.Count / 3) _globalSentiment = "Negative";
         else if (sentiments.Count(s => s == "Positive") > sentiments.Count / 2) _globalSentiment = "Positive";
         else _globalSentiment = "Mixed";
+
+        var analysisResults = _reportRows.Where(r => r.Analysis != null).Select(r => r.Analysis!).ToList();
+        if (analysisResults.Any())
+        {
+            _avgConsensus = analysisResults.Average(a => a.ConsensusScore);
+        }
     }
 
     private Color GetSentimentColor(string? s) => s switch

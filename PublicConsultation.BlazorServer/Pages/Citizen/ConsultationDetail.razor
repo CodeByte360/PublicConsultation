@@ -9,6 +9,7 @@
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
+@inject PublicConsultation.Core.Interfaces.IAiAnalysisService AiService
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     @if (_document == null)
@@ -32,8 +33,7 @@
             </div>
             <MudText Typo="Typo.body1" Class="mt-4">@_document.Description</MudText>
             <MudDivider Class="my-4" />
-            <MudAlert Severity="Severity.Info">Click on "Give Opinion" next to any rule to submit your feedback. You can
-                also view the original document using the button above.</MudAlert>
+            <MudAlert Severity="Severity.Info">Click on "Give Opinion" next to any rule to submit your feedback.</MudAlert>
         </MudPaper>
 
         <MudText Typo="Typo.h5" Class="mb-4">Draft Rules</MudText>
@@ -43,11 +43,15 @@
             <MudPaper Class="pa-4 mb-4 border-l-4 border-solid border-primary" Elevation="2">
                 <div class="d-flex justify-space-between">
                     <MudText Typo="Typo.h6">Rule @rule.RuleNumber: @rule.SectionTitle</MudText>
-                    <MudButton Variant="Variant.Filled" Color="@(HasSubmitted(rule.Id) ? Color.Success : Color.Primary)"
-                        StartIcon="@(HasSubmitted(rule.Id) ? Icons.Material.Filled.Check : Icons.Material.Filled.Comment)"
-                        Disabled="@HasSubmitted(rule.Id)" OnClick="@(() => OpenOpinionDialog(rule))">
-                        @(HasSubmitted(rule.Id) ? "Submitted" : "Give Opinion")
-                    </MudButton>
+                    <div>
+                        <MudButton Variant="Variant.Filled" Color="@(HasSubmitted(rule.Id) ? Color.Success : Color.Primary)"
+                            StartIcon="@(HasSubmitted(rule.Id) ? Icons.Material.Filled.Check : Icons.Material.Filled.Comment)"
+                            Disabled="@HasSubmitted(rule.Id)" OnClick="@(() => OpenOpinionDialog(rule))">
+                            @(HasSubmitted(rule.Id) ? "Submitted" : "Give Opinion")
+                        </MudButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.Compare" Color="Color.Info" Title="Compare Changes"
+                            OnClick="@(() => OpenDiffDialog(rule))" Class="ml-2" />
+                    </div>
                 </div>
 
                 <MudGrid Class="mt-2">
@@ -60,6 +64,67 @@
                         <MudText Typo="Typo.body2">@rule.ProposedProvision</MudText>
                     </MudItem>
                 </MudGrid>
+
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Public Feedback</MudText>
+                @if (!_ruleOpinions.ContainsKey(rule.Id) || !_ruleOpinions[rule.Id].Any())
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">No feedback yet. Be the first to share your thoughts!
+                    </MudText>
+                }
+                else
+                {
+                    <div style="max-height: 200px; overflow-y: auto;" class="mb-4">
+                        @foreach (var opinion in _ruleOpinions[rule.Id])
+                        {
+                            <div class="pa-2 mb-2 rounded bg-light" style="background-color: #f8f9fa;">
+                                <div class="d-flex align-center">
+                                    <MudText Typo="Typo.caption" Class="fw-bold mr-1">
+                                        @(opinion.User?.FullNameEnglish ?? "Anonymous Citizen")
+                                    </MudText>
+                                    @if (opinion.User?.IsVerified == true)
+                                    {
+                                        <MudTooltip Text="Verified Citizen">
+                                            <MudIcon Icon="@Icons.Material.Filled.Verified" Color="Color.Primary" Size="Size.Small" />
+                                        </MudTooltip>
+                                    }
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-auto">
+                                        @opinion.CreatedDate.ToShortDateString()
+                                    </MudText>
+                                </div>
+                                <MudText Typo="Typo.body2" Style="font-size: 0.85rem;">@opinion.OpinionText</MudText>
+                            </div>
+                        }
+                    </div>
+
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">AI Insight & Consensus</MudText>
+                    @if (!_ruleAnalysis.ContainsKey(rule.Id) || _ruleOpinions[rule.Id].Count < 2)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Waiting for more feedback to generate AI analysis.
+                        </MudText>
+                    }
+                    else
+                    {
+                        var analysis = _ruleAnalysis[rule.Id];
+                        <div class="pa-4 rounded" style="background-color: #f0f4f8; border-left: 4px solid #1e88e5;">
+                            <div class="d-flex align-center mb-2">
+                                <MudChip T="string" Size="Size.Small" Color="@GetSentimentColor(analysis.Sentiment)" Class="mr-2">
+                                    @analysis.Sentiment</MudChip>
+                                <MudText Typo="Typo.caption" Class="fw-bold">
+                                    Consensus: @(analysis.ConsensusScore.ToString("P0"))
+                                </MudText>
+                                <MudProgressLinear Color="@GetSentimentColor(analysis.Sentiment)"
+                                    Value="@(analysis.ConsensusScore * 100)" Class="ml-4" Style="width: 100px;" />
+                            </div>
+                            <MudText Typo="Typo.body2" Class="mb-2"><b>AI Summary:</b> @analysis.Summary</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Primary" Class="fw-bold">
+                                <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" Class="mr-1" />
+                                AI Recommendation: @analysis.Recommendation
+                            </MudText>
+                        </div>
+                    }
+                }
             </MudPaper>
         }
     }
@@ -72,6 +137,9 @@
     private HashSet<Guid> _userOpinionRuleIds = new();
     private Guid _currentUserId;
     private bool _isAuthenticated;
+
+    private Dictionary<Guid, List<Opinion>> _ruleOpinions = new();
+    private Dictionary<Guid, PublicConsultation.Core.Interfaces.AnalysisResultDto> _ruleAnalysis = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -90,8 +158,6 @@
             if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var uid))
             {
                 _currentUserId = uid;
-
-                // Load existing opinions for this user and document
                 var existingOpinions = await DbContext.Opinions
                 .Where(o => o.UserId == _currentUserId && o.Rule.DraftDocumentId == Id)
                 .Select(o => o.RuleId)
@@ -104,8 +170,33 @@
         if (_document != null)
         {
             _rules = await DbContext.Rules.Where(r => r.DraftDocumentId == Id).OrderBy(r => r.DisplayOrder).ToListAsync();
+
+            var ruleIds = _rules.Select(r => r.Id).ToList();
+            var allOpinions = await DbContext.Opinions
+            .Include(o => o.User)
+            .Where(o => ruleIds.Contains(o.RuleId))
+            .OrderByDescending(o => o.CreatedDate)
+            .ToListAsync();
+
+            _ruleOpinions = allOpinions.GroupBy(o => o.RuleId).ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var rule in _rules)
+            {
+                if (_ruleOpinions.ContainsKey(rule.Id) && _ruleOpinions[rule.Id].Count >= 2)
+                {
+                    _ruleAnalysis[rule.Id] = await AiService.AnalyzeBatchAsync(_ruleOpinions[rule.Id]);
+                }
+            }
         }
     }
+
+    private Color GetSentimentColor(string? s) => s switch
+    {
+        "Positive" => Color.Success,
+        "Negative" => Color.Error,
+        "Mixed" => Color.Warning,
+        _ => Color.Default
+    };
 
     private bool HasSubmitted(Guid ruleId) => _userOpinionRuleIds.Contains(ruleId);
 
@@ -130,8 +221,19 @@
         if (!result.Canceled)
         {
             Snackbar.Add("Opinion Submitted Successfully!", Severity.Success);
-            await LoadData(); // Refresh to disable the button
+            await LoadData();
         }
+    }
+
+    private async Task OpenDiffDialog(Rule rule)
+    {
+        var parameters = new DialogParameters
+            {
+                ["OldText"] = rule.ExistingProvision,
+                ["NewText"] = rule.ProposedProvision
+            };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        DialogService.Show<DiffViewDialog>($"Changes for Rule {rule.RuleNumber}", parameters, options);
     }
 
     private async Task OpenChatbot()

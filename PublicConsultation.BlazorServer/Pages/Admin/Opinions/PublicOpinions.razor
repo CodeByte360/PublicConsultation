@@ -5,6 +5,7 @@
 @using PublicConsultation.Infrastructure.Data
 @using Microsoft.EntityFrameworkCore
 @inject ApplicationDbContext DbContext
+@inject PublicConsultation.Core.Interfaces.IAiAnalysisService AiService
 @inject NavigationManager NavigationManager
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
@@ -147,6 +148,21 @@
         }
 
         _opinions = await query.OrderByDescending(o => o.CreatedDate).ToListAsync();
+
+        // Backfill sentiment for opinions that lack it
+        bool needsSave = false;
+        foreach (var op in _opinions)
+        {
+            if (string.IsNullOrEmpty(op.Sentiment) || op.Sentiment == "Neutral")
+            {
+                op.Sentiment = await AiService.AnalyzeSentimentAsync(op.OpinionText);
+                needsSave = true;
+            }
+        }
+        if (needsSave)
+        {
+            await DbContext.SaveChangesAsync();
+        }
     }
 
     private IEnumerable<Opinion> _filteredOpinions => _opinions

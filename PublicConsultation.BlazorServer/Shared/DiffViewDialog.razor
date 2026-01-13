@@ -1,0 +1,83 @@
+@using System.Text.RegularExpressions
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Existing Provision</MudText>
+                <MudPaper Class="pa-4 mud-background-gray" Elevation="0" Style="height: 300px; overflow-y: auto;">
+                    <MudText Typo="Typo.body2">@OldText</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Proposed Provision (Changes Highlighted)</MudText>
+                <MudPaper Class="pa-4" Elevation="0"
+                    Style="height: 300px; overflow-y: auto; background-color: #f0fff4;">
+                    <div class="diff-container">
+                        @((MarkupString)GenerateDiffHtml())
+                    </div>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+        <div class="mt-4">
+            <MudAlert Severity="Severity.Info" Dense="true">
+                <span
+                    style="background-color: #ccffcc; margin-right: 8px; padding: 2px 4px; border-radius: 4px;">Green</span>
+                highlights represent keywords in the new proposal.
+            </MudAlert>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .diff-added {
+        background-color: #ccffcc;
+        text-decoration: none;
+        padding: 2px 0;
+        border-radius: 2px;
+    }
+
+    .diff-removed {
+        background-color: #ffcccc;
+        text-decoration: line-through;
+        padding: 2px 0;
+        border-radius: 2px;
+    }
+</style>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string OldText { get; set; } = "";
+    [Parameter] public string NewText { get; set; } = "";
+
+    private void Close() => MudDialog.Close();
+
+    private string GenerateDiffHtml()
+    {
+        if (string.IsNullOrEmpty(OldText)) return NewText;
+
+        // Very basic word-level highlighting for demo purposes
+        var oldWords = OldText.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(w => w.Trim('.', ',', ';',
+        ':').ToLower()).ToHashSet();
+        var newWords = NewText.Split(' ').ToList();
+
+        var result = new System.Text.StringBuilder();
+        foreach (var word in newWords)
+        {
+            var cleanWord = word.Trim('.', ',', ';', ':').ToLower();
+            if (!oldWords.Contains(cleanWord) && !string.IsNullOrWhiteSpace(cleanWord))
+            {
+                result.Append($"<span class='diff-added'>{word}</span> ");
+            }
+            else
+            {
+                result.Append($"{word} ");
+            }
+        }
+
+        return result.ToString();
+    }
+}

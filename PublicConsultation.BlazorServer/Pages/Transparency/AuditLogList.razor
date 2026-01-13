@@ -1,0 +1,81 @@
+@page "/transparency/audit-log"
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@inject IAuditLogService AuditLogService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudText Typo="Typo.h4" Class="mb-6">Public Audit Log</MudText>
+    <MudText Typo="Typo.body1" Class="mb-4">
+        To ensure transparency and trust, all major activities regarding draft documents are recorded in this
+        immutable-style audit log.
+    </MudText>
+
+    @if (_loading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudAlert Severity="(_isIntegrityVerified ? Severity.Success : Severity.Error)" Variant="Variant.Filled"
+            Class="mb-6">
+            @(_isIntegrityVerified
+                ? "Structure Integrity Verified: All log hashes match the blockchain-lite chain."
+                : "Warning: Log integrity could not be verified. Please contact system administration.")
+        </MudAlert>
+
+        <MudTable Items="@_logs" T="AuditLog" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="4">
+            <HeaderContent>
+                <MudTh>Timestamp</MudTh>
+                <MudTh>Activity</MudTh>
+                <MudTh>Document</MudTh>
+                <MudTh>Details</MudTh>
+                <MudTh>Hash (Chain)</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Timestamp">@context.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+                <MudTd DataLabel="Activity">
+                    <MudChip T="string" Color="Color.Info" Size="Size.Small">@context.Activity</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Document">
+                    @(context.RelatedDocument?.Title ?? "N/A")
+                </MudTd>
+                <MudTd DataLabel="Details">@context.Details</MudTd>
+                <MudTd DataLabel="Hash">
+                    <MudTooltip Text="@($"Previous: {context.PreviousHash}")">
+                        <MudText Typo="Typo.caption" Class="text-truncate" Style="max-width: 100px;">
+                            @context.CurrentHash
+                        </MudText>
+                    </MudTooltip>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    private List<AuditLog> _logs = new();
+    private bool _loading = true;
+    private bool _isIntegrityVerified = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try 
+        {
+            _logs = await AuditLogService.GetLogsAsync();
+            _isIntegrityVerified = await AuditLogService.VerifyIntegrityAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading audit logs: {ex.Message}");
+            Snackbar.Add("Error loading audit logs. Page failed to initialize correctly.", Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

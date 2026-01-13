@@ -4,6 +4,7 @@
 @using PublicConsultation.Infrastructure.Data
 @using Microsoft.EntityFrameworkCore
 @inject ApplicationDbContext DbContext
+@inject PublicConsultation.Core.Interfaces.IAiAnalysisService AiService
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <MudText Typo="Typo.h4" GutterBottom="true">Admin Dashboard</MudText>
@@ -70,7 +71,7 @@
                 <MudText Typo="Typo.h6" Class="mb-4">Public Sentiment</MudText>
                 <div class="d-flex justify-center">
                     <MudChart ChartType="ChartType.Donut" InputData="@_sentimentData" InputLabels="@_sentimentLabels"
-                        Width="180px" Height="180px" 
+                        Width="180px" Height="180px"
                         ChartOptions="@(new ChartOptions { ChartPalette = new string[] { "#4CAF50", "#F44336", "#FFC107", "#9E9E9E" } })" />
                 </div>
                 <div class="mt-8">
@@ -107,12 +108,14 @@
         <MudItem xs="12">
             <MudPaper Class="pa-4" Elevation="2">
                 <MudText Typo="Typo.h6" Class="mb-4">Controversial Sections (Heatmap)</MudText>
-                <MudTable Items="@_controversialSections" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="0">
+                <MudTable Items="@_controversialSections" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm"
+                    Elevation="0">
                     <HeaderContent>
                         <MudTh>Section</MudTh>
                         <MudTh>Total Feedback</MudTh>
                         <MudTh>Negative Opinions</MudTh>
                         <MudTh>Controversy Level</MudTh>
+                        <MudTh>Actions</MudTh>
                     </HeaderContent>
                     <RowTemplate>
                         <MudTd DataLabel="Section">
@@ -124,7 +127,13 @@
                             <MudText Color="Color.Error"><b>@context.NegativeCount</b></MudText>
                         </MudTd>
                         <MudTd DataLabel="Sentiment">
-                             <MudProgressLinear Color="@(GetHeatmapColor(context.NegativeRatio))" Value="@(context.NegativeRatio * 100)" Class="my-7" />
+                            <MudProgressLinear Color="@(GetHeatmapColor(context.NegativeRatio))"
+                                Value="@(context.NegativeRatio * 100)" Class="my-7" />
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary"
+                                Href="@($"/admin/reports/comparative/{context.DocId}")"
+                                Title="Generate Comparative Statement" />
                         </MudTd>
                     </RowTemplate>
                 </MudTable>
@@ -160,35 +169,50 @@
         _publishedCount = await DbContext.DraftDocuments.CountAsync(d => d.Status == "Published");
         _docStatusData = new double[] { _draftCount, _publishedCount };
 
-        // Calculate Global Sentiment
+        // Calculate Global Sentiment & Backfill missing data
         var allOpinions = await DbContext.Opinions.ToListAsync();
+        bool needsSave = false;
+        foreach (var op in allOpinions)
+        {
+            if (string.IsNullOrEmpty(op.Sentiment) || op.Sentiment == "Neutral")
+            {
+                op.Sentiment = await AiService.AnalyzeSentimentAsync(op.OpinionText);
+                needsSave = true;
+            }
+        }
+        if (needsSave)
+        {
+            await DbContext.SaveChangesAsync();
+        }
+
         _sentimentData[0] = allOpinions.Count(o => o.Sentiment == "Positive");
         _sentimentData[1] = allOpinions.Count(o => o.Sentiment == "Negative");
         _sentimentData[2] = allOpinions.Count(o => o.Sentiment == "Mixed");
-        _sentimentData[3] = allOpinions.Count(o => string.IsNullOrEmpty(o.Sentiment) || o.Sentiment == "Neutral");
+        _sentimentData[3] = allOpinions.Count(o => o.Sentiment == "Neutral");
 
         // Calculate Controversial Sections
         _controversialSections = await DbContext.Opinions
-            .Include(o => o.Rule)
-            .ThenInclude(r => r.DraftDocument)
-            .GroupBy(o => o.RuleId)
-            .Select(g => new ControversialSection
+        .Include(o => o.Rule)
+        .ThenInclude(r => r.DraftDocument)
+        .GroupBy(o => o.RuleId)
+        .Select(g => new ControversialSection
             {
+                DocId = g.First().Rule.DraftDocumentId,
                 SectionTitle = g.First().Rule.SectionTitle,
                 DocTitle = g.First().Rule.DraftDocument.Title,
                 TotalFeedback = g.Count(),
                 NegativeCount = g.Count(o => o.Sentiment == "Negative")
             })
-            .OrderByDescending(s => s.NegativeCount)
-            .Take(5)
-            .ToListAsync();
+        .OrderByDescending(s => s.NegativeCount)
+        .Take(5)
+        .ToListAsync();
 
         _recentOpinions = await DbContext.Opinions
-            .Include(o => o.User)
-            .Include(o => o.Rule)
-            .OrderByDescending(o => o.CreatedDate)
-            .Take(10)
-            .ToListAsync();
+        .Include(o => o.User)
+        .Include(o => o.Rule)
+        .OrderByDescending(o => o.CreatedDate)
+        .Take(10)
+        .ToListAsync();
     }
 
     private Color GetHeatmapColor(double ratio) => ratio switch
@@ -200,6 +224,7 @@
 
     public class ControversialSection
     {
+        public Guid DocId { get; set; }
         public string SectionTitle { get; set; } = "";
         public string DocTitle { get; set; } = "";
         public int TotalFeedback { get; set; }

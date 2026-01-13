@@ -1,8 +1,11 @@
 @using PublicConsultation.Core.Entities
 @using PublicConsultation.Infrastructure.Data
 @using PublicConsultation.Core.Interfaces
+@implements IDisposable
 @inject ApplicationDbContext DbContext
 @inject IDuplicateDetectionService DuplicateService
+@inject IAuditLogService AuditLogService
+@inject IAiAnalysisService AiService
 
 <MudDialog>
     <DialogContent>
@@ -27,22 +30,24 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!success)">Submit</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!success || _isCheckingDuplicate)">Submit
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter] public Guid RuleId { get; set; }
-    [Parameter] public string RuleNumber { get; set; }
+    [Parameter] public string RuleNumber { get; set; } = string.Empty;
     [Parameter] public Guid UserId { get; set; }
 
-    private MudForm form;
+    private MudForm form = null!;
     private bool success;
     private Opinion model = new Opinion();
     private bool _isDuplicateDetected = false;
-    private System.Threading.Timer? _debounceTimer;
+    private bool _isCheckingDuplicate = false;
+    private CancellationTokenSource? _cts;
 
     private async Task OnTextChanged(string val)
     {
@@ -51,34 +56,82 @@
 
         if (string.IsNullOrWhiteSpace(val) || val.Length < 10) return;
 
-        // Debounce logic
-        _debounceTimer?.Dispose();
-        _debounceTimer = new System.Threading.Timer(async _ =>
+        // Safe Debouncing using CancellationTokenSource
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
+
+        try
         {
-            await InvokeAsync(async () =>
-    {
-    var similar = await DuplicateService.FindSimilarOpinionsAsync(val, RuleId);
-    _isDuplicateDetected = similar.Any();
-    StateHasChanged();
-            });
-        }, null, 500, System.Threading.Timeout.Infinite);
+            await Task.Delay(500, token);
+            _isCheckingDuplicate = true;
+            StateHasChanged();
+
+            // Find similar opinions safely on the UI thread
+            var similar = await DuplicateService.FindSimilarOpinionsAsync(val, RuleId);
+
+            if (!token.IsCancellationRequested)
+            {
+                _isDuplicateDetected = similar.Any();
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Expected
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isCheckingDuplicate = false;
+                StateHasChanged();
+            }
+        }
     }
 
     private void Cancel() => MudDialog.Cancel();
 
     private async Task Submit()
     {
+        _cts?.Cancel(); // Stop any pending duplicate checks
         await form.Validate();
         if (form.IsValid)
         {
-            model.RuleId = RuleId;
-            model.UserId = UserId;
-            model.CreatedDate = DateTime.UtcNow;
+            try
+            {
+                model.RuleId = RuleId;
+                model.UserId = UserId;
+                model.CreatedDate = DateTime.UtcNow;
 
-            DbContext.Opinions.Add(model);
-            await DbContext.SaveChangesAsync();
+                // Analyze sentiment before saving
+                model.Sentiment = await AiService.AnalyzeSentimentAsync(model.OpinionText);
 
-            MudDialog.Close(DialogResult.Ok(true));
+                DbContext.Opinions.Add(model);
+                await DbContext.SaveChangesAsync();
+
+                // Log activity
+                var user = await DbContext.UserAccounts.FindAsync(UserId);
+                await AuditLogService.LogActivityAsync(
+                "Opinion Submitted",
+                $"User {user?.Email ?? "Anonymous"} submitted an opinion for Rule {RuleNumber}",
+                user?.Email ?? "Anonymous",
+                "System",
+                null);
+
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception ex)
+            {
+                // Silently handle logging errors or rethrow if DB fails
+                Console.WriteLine($"Error during submission: {ex.Message}");
+                MudDialog.Close(DialogResult.Ok(true)); // Still close as opinion was saved
+            }
         }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 }

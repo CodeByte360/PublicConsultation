@@ -16,4 +16,5 @@ public class AnalysisResultDto
     public string Sentiment { get; set; } = "Neutral"; // Positive, Negative, Mixed, Neutral
     public List<string> KeyThemes { get; set; } = new();
     public string Recommendation { get; set; } = string.Empty;
+    public double ConsensusScore { get; set; } // 0.0 to 1.0 (Higher is more positive consensus)
 }
