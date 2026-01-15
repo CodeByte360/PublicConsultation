@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using PublicConsultation.Core.Interfaces;
 using System.Security.Claims;
+using Microsoft.Extensions.Logging;
 
 namespace PublicConsultation.BlazorServer.Controllers;
 
@@ -10,43 +11,53 @@ namespace PublicConsultation.BlazorServer.Controllers;
 public class AccountController : Controller
 {
     private readonly IAuthService _authService;
+    private readonly ILogger<AccountController> _logger;
 
-    public AccountController(IAuthService authService)
+    public AccountController(IAuthService authService, ILogger<AccountController> logger)
     {
         _authService = authService;
+        _logger = logger;
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromForm] string email, [FromForm] string password, [FromForm] string returnUrl = "/")
     {
-        var user = await _authService.LoginAsync(email, password);
-
-        if (user == null)
+        try
         {
-            return Redirect($"/login?error=Invalid credentials");
+            var user = await _authService.LoginAsync(email, password);
+
+            if (user == null)
+            {
+                return Redirect($"/login?error=Invalid credentials");
+            }
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role?.Name ?? "Citizen"),
+                new Claim("UserId", user.Id.ToString())
+            };
+
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var authProperties = new AuthenticationProperties
+            {
+                IsPersistent = true,
+                ExpiresUtc = DateTime.UtcNow.AddMinutes(60)
+            };
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity),
+                authProperties);
+
+            return LocalRedirect(returnUrl);
         }
-
-        var claims = new List<Claim>
+        catch (Exception ex)
         {
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.Role?.Name ?? "Citizen"),
-            new Claim("UserId", user.Id.ToString())
-        };
-
-        var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var authProperties = new AuthenticationProperties
-        {
-            IsPersistent = true,
-            ExpiresUtc = DateTime.UtcNow.AddMinutes(60)
-        };
-
-        await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(claimsIdentity),
-            authProperties);
-
-        return LocalRedirect(returnUrl);
+            _logger.LogError(ex, "An error occurred during login for user {Email}", email);
+            return Redirect($"/login?error=An internal error occurred. Please try again later.");
+        }
     }
 
     [HttpGet("logout")]
