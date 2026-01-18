@@ -27,7 +27,8 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.C
     });
 
 builder.Services.AddRazorPages();
-builder.Services.AddServerSideBlazor();
+builder.Services.AddServerSideBlazor()
+    .AddCircuitOptions(options => { options.DetailedErrors = true; });
 builder.Services.AddMudServices();
 
 // Custom Services
