@@ -4,6 +4,7 @@
 @using PublicConsultation.Core.Interfaces
 @using PublicConsultation.Infrastructure.Data
 @inject IDocumentService DocumentService
+@inject IMinistryService MinistryService
 @inject ApplicationDbContext DbContext
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
@@ -13,8 +14,13 @@
         <MudText Typo="Typo.h5" GutterBottom="true">Upload Draft Document</MudText>
         <MudForm @ref="form" @bind-IsValid="@success">
             <MudTextField T="string" Label="Document Title" Required="true" @bind-Value="model.Title" />
-            <MudTextField T="string" Label="Ministry / Department" Required="true"
-                @bind-Value="model.MinistryOrDepartment" />
+            <MudSelect T="Guid?" Label="Ministry / Department" Required="true" @bind-Value="model.MinistryId"
+                AnchorOrigin="Origin.BottomCenter">
+                @foreach (var ministry in Ministries)
+                {
+                    <MudSelectItem Value="@((Guid?)ministry.Id)">@ministry.Name</MudSelectItem>
+                }
+            </MudSelect>
             <MudTextField T="string" Label="Description" Lines="3" @bind-Value="model.Description" />
 
             <MudDateRangePicker Label="Consultation Period" @bind-DateRange="_dateRange" Required="true"
@@ -46,6 +52,12 @@
     DraftDocument model = new DraftDocument();
     DateRange _dateRange = new DateRange(DateTime.Today, DateTime.Today.AddDays(14));
     IBrowserFile _file;
+    List<Ministry> Ministries = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Ministries = await MinistryService.GetAllMinistriesAsync();
+    }
 
     private void UploadFile(InputFileChangeEventArgs e)
     {
@@ -75,6 +87,9 @@
                 model.ConsultationStartDate = _dateRange.Start ?? DateTime.Today;
                 model.ConsultationEndDate = _dateRange.End ?? DateTime.Today.AddDays(14);
                 model.Status = "Draft";
+
+                // Set deprecated field for compatibility if needed, or leave empty
+                model.MinistryOrDepartment = Ministries.FirstOrDefault(m => m.Id == model.MinistryId)?.Name ?? string.Empty;
 
                 DbContext.DraftDocuments.Add(model);
                 await DbContext.SaveChangesAsync();

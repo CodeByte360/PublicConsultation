@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 
@@ -8,6 +9,9 @@ public class DraftDocument : BaseEntity
     public string Title { get; set; } = string.Empty;
     public string MinistryOrDepartment { get; set; } = string.Empty;
     public string? Description { get; set; }
+
+    public Guid? MinistryId { get; set; }
+    public Ministry? Ministry { get; set; }
     public string FilePath { get; set; } = string.Empty; // Path to PDF/DOCX
     public string Status { get; set; } = "Draft"; // Draft, Published, Closed
     public DateTime ConsultationStartDate { get; set; }

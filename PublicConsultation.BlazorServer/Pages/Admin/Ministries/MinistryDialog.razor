@@ -1,0 +1,64 @@
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@inject IMinistryService MinistryService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Business" Class="mr-3" />
+            @(Ministry.Id == Guid.Empty ? "Add Ministry" : "Edit Ministry")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success" Class="px-4 py-4">
+            <MudTextField T="string" Label="Name" Required="true" @bind-Value="Ministry.Name" Variant="Variant.Outlined"
+                Class="mb-3" />
+            <MudTextField T="string" Label="Description" Lines="3" @bind-Value="Ministry.Description"
+                Variant="Variant.Outlined" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Ministry Ministry { get; set; } = new Ministry();
+
+    MudForm form;
+    bool success;
+
+    void Cancel() => MudDialog.Cancel();
+
+    async Task Submit()
+    {
+        await form.Validate();
+        if (success)
+        {
+            try
+            {
+                if (Ministry.Id == Guid.Empty)
+                {
+                    // This case might not be hit if new Ministry are initialized with Guid.NewGuid() in constructor
+                    // But if Ministry comes from externally it might be empty.
+                    // Actually BaseEntity initializes Id.
+                    // Logic should depend on how the dialog is invoked.
+                }
+
+                // The caller handles the actual Save/Update call to service usually,
+                // OR we do it here. Let's do it here for simplicity if we want, or return the object.
+                // Returning the object is better for separation.
+
+                MudDialog.Close(DialogResult.Ok(Ministry));
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

@@ -15,6 +15,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Role> Roles { get; set; }
     public DbSet<AiAnalysisResult> AiAnalysisResults { get; set; }
     public DbSet<DraftDocument> DraftDocuments { get; set; }
+    public DbSet<Ministry> Ministries { get; set; }
     public DbSet<Rule> Rules { get; set; }
     public DbSet<Opinion> Opinions { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }

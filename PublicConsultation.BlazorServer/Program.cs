@@ -37,6 +37,7 @@ builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IEmailService, Pub
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAiAnalysisService, PublicConsultation.Infrastructure.Services.AiAnalysisService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IDuplicateDetectionService, PublicConsultation.Infrastructure.Services.DuplicateDetectionService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAuditLogService, PublicConsultation.Infrastructure.Services.AuditLogService>();
+builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IMinistryService, PublicConsultation.Infrastructure.Services.MinistryService>();
 builder.Services.AddControllers();
 
 var app = builder.Build();
