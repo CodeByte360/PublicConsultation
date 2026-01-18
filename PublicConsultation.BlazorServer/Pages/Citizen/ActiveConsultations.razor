@@ -13,39 +13,39 @@
 
     @if (_loading)
     {
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="d-block mx-auto" />
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="d-block mx-auto" />
     }
     else if (!_documents.Any())
     {
-        <MudAlert Severity="Severity.Info" Class="mt-4">No active consultations at the moment.</MudAlert>
+            <MudAlert Severity="Severity.Info" Class="mt-4">No active consultations at the moment.</MudAlert>
     }
     else
     {
-        <MudGrid>
+            <MudGrid>
             @foreach (var doc in _documents)
             {
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="4" Class="h-100 d-flex flex-column">
-                        <MudCardHeader>
-                            <CardHeaderContent>
-                                <MudText Typo="Typo.h6">@doc.Title</MudText>
-                                <MudText Typo="Typo.caption">@doc.MinistryOrDepartment</MudText>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent Class="flex-grow-1">
-                            <MudText Typo="Typo.body2" Lines="3">@doc.Description</MudText>
-                            <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mt-2">Open until
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudCard Elevation="4" Class="h-100 d-flex flex-column">
+                                <MudCardHeader>
+                                    <CardHeaderContent>
+                                        <MudText Typo="Typo.h6">@doc.Title</MudText>
+                                        <MudText Typo="Typo.caption">@doc.MinistryOrDepartment</MudText>
+                                    </CardHeaderContent>
+                                </MudCardHeader>
+                                <MudCardContent Class="flex-grow-1">
+                                    <MudText Typo="Typo.body2" Lines="3">@doc.Description</MudText>
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mt-2">Open until
                                 @doc.ConsultationEndDate.ToShortDateString()</MudChip>
-                        </MudCardContent>
-                        <MudCardActions>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary"
-                                EndIcon="@Icons.Material.Filled.ArrowForward" Href="@($"/consultation/{doc.Id}")">Participate
-                            </MudButton>
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
+                                </MudCardContent>
+                                <MudCardActions>
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary"
+                                        EndIcon="@Icons.Material.Filled.ArrowForward" Href="@($"/consultation/{doc.Oid}")">Participate
+                                    </MudButton>
+                                </MudCardActions>
+                            </MudCard>
+                        </MudItem>
             }
-        </MudGrid>
+            </MudGrid>
     }
 </MudContainer>
 

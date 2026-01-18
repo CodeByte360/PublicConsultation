@@ -19,7 +19,7 @@
                     <MudSelectItem T="Guid?" Value="null">All Documents</MudSelectItem>
                     @foreach (var doc in _documents)
                     {
-                        <MudSelectItem T="Guid?" Value="@doc.Id">@doc.Title</MudSelectItem>
+                        <MudSelectItem T="Guid?" Value="@doc.Oid">@doc.Title</MudSelectItem>
                     }
                 </MudSelect>
             </MudItem>
