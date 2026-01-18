@@ -19,7 +19,7 @@
                 AnchorOrigin="Origin.BottomCenter">
                 @foreach (var role in Roles)
                 {
-                    <MudSelectItem Value="@role.Id">@role.Name</MudSelectItem>
+                    <MudSelectItem Value="@role.Oid">@role.Name</MudSelectItem>
                 }
             </MudSelect>
 
@@ -47,7 +47,7 @@
         Roles = await DbContext.Roles.ToListAsync();
         // Default to Citizen if available
         var citizen = Roles.FirstOrDefault(r => r.Name == "Citizen");
-        if (citizen != null) selectedRoleId = citizen.Id;
+        if (citizen != null) selectedRoleId = citizen.Oid;
     }
 
     private void Cancel() => MudDialog.Cancel();

@@ -228,7 +228,7 @@
                 var row = new ReportRow
                     {
                         Rule = rule,
-                        Opinions = allOpinions.Where(o => o.RuleId == rule.Id).ToList(),
+                        Opinions = allOpinions.Where(o => o.RuleId == rule.Oid).ToList(),
                         IsProcessing = true
                     };
                 _reportRows.Add(row);

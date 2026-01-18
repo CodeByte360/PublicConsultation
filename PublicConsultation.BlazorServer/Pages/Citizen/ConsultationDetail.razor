@@ -44,7 +44,7 @@
                 <div class="d-flex justify-space-between">
                     <MudText Typo="Typo.h6">Rule @rule.RuleNumber: @rule.SectionTitle</MudText>
                     <div>
-                        <MudButton Variant="Variant.Filled" Color="@(HasSubmitted(rule.Id) ? Color.Success : Color.Primary)"
+                        <MudButton Variant="Variant.Filled" Color="@(HasSubmitted(rule.Oid) ? Color.Success : Color.Primary)"
                             StartIcon="@(HasSubmitted(rule.Id) ? Icons.Material.Filled.Check : Icons.Material.Filled.Comment)"
                             Disabled="@HasSubmitted(rule.Id)" OnClick="@(() => OpenOpinionDialog(rule))">
                             @(HasSubmitted(rule.Id) ? "Submitted" : "Give Opinion")
@@ -184,7 +184,7 @@
             {
                 if (_ruleOpinions.ContainsKey(rule.Id) && _ruleOpinions[rule.Id].Count >= 2)
                 {
-                    _ruleAnalysis[rule.Id] = await AiService.AnalyzeBatchAsync(_ruleOpinions[rule.Id]);
+                    _ruleAnalysis[rule.Id] = await AiService.AnalyzeBatchAsync(_ruleOpinions[rule.Oid]);
                 }
             }
         }
@@ -211,7 +211,7 @@
 
         var parameters = new DialogParameters
             {
-                ["RuleId"] = rule.Id,
+                ["RuleId"] = rule.Oid,
                 ["RuleNumber"] = rule.RuleNumber,
                 ["UserId"] = _currentUserId
             };

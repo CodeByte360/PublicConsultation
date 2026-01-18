@@ -18,7 +18,7 @@
                 AnchorOrigin="Origin.BottomCenter">
                 @foreach (var ministry in Ministries)
                 {
-                    <MudSelectItem Value="@((Guid?)ministry.Id)">@ministry.Name</MudSelectItem>
+                    <MudSelectItem Value="@((Guid?)ministry.Oid)">@ministry.Name</MudSelectItem>
                 }
             </MudSelect>
             <MudTextField T="string" Label="Description" Lines="3" @bind-Value="model.Description" />
@@ -89,7 +89,7 @@
                 model.Status = "Draft";
 
                 // Set deprecated field for compatibility if needed, or leave empty
-                model.MinistryOrDepartment = Ministries.FirstOrDefault(m => m.Id == model.MinistryId)?.Name ?? string.Empty;
+                model.MinistryOrDepartment = Ministries.FirstOrDefault(m => m.Oid == model.MinistryId)?.Name ?? string.Empty;
 
                 DbContext.DraftDocuments.Add(model);
                 await DbContext.SaveChangesAsync();
@@ -98,7 +98,7 @@
                 var rules = await DocumentService.ParseDocumentAsync(filePath);
                 foreach (var rule in rules)
                 {
-                    rule.DraftDocumentId = model.Id;
+                    rule.DraftDocumentId = model.Oid;
                     DbContext.Rules.Add(rule);
                 }
                 await DbContext.SaveChangesAsync();

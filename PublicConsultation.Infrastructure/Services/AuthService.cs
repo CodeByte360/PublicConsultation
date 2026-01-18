@@ -55,7 +55,7 @@ public class AuthService : IAuthService
             var defaultRole = await _context.Roles.FirstOrDefaultAsync(r => r.Name == "Citizen");
             if (defaultRole != null)
             {
-                user.RoleId = defaultRole.Id;
+                user.RoleId = defaultRole.Oid;
             }
             else
             {

@@ -92,7 +92,7 @@
 
     private async Task LoadData()
     {
-        _document = await DbContext.DraftDocuments.FirstOrDefaultAsync(d => d.Id == Id);
+        _document = await DbContext.DraftDocuments.FirstOrDefaultAsync(d => d.Oid == Id);
         if (_document != null)
         {
             _rules = await DbContext.Rules.Where(r => r.DraftDocumentId == Id).OrderBy(r => r.DisplayOrder).ToListAsync();
@@ -135,7 +135,7 @@
                             <p>You can participate and give your opinion here:</p>
                             <p><a href='{NavigationManager.BaseUri}active-consultations'>View All Consultations</a></p>
                             <p>Or view this specific document directly:</p>
-                            <p><a href='{NavigationManager.BaseUri}consultation/{doc.Id}'>{doc.Title}</a></p>
+                            <p><a href='{NavigationManager.BaseUri}consultation/{doc.Oid}'>{doc.Title}</a></p>
                             <br/>
                             <p>Thank you for participating in the legislative process.</p>";
 
@@ -167,7 +167,7 @@
 
     private async Task EditRule(Rule rule)
     {
-        var parameters = new DialogParameters { ["RuleId"] = rule.Id, ["DraftDocumentId"] = Id };
+        var parameters = new DialogParameters { ["RuleId"] = rule.Oid, ["DraftDocumentId"] = Id };
         var dialog = DialogService.Show<RuleDialog>("Edit Rule", parameters);
         var result = await dialog.Result;
 

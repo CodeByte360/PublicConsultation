@@ -1,9 +1,13 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace PublicConsultation.Core.Entities;
 
 public class UserAccount : BaseEntity
 {
+
+    [Key]
+    public Guid Oid { get; set; }
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
@@ -19,5 +23,5 @@ public class UserAccount : BaseEntity
 
     // Foreign Key
     public Guid RoleId { get; set; }
-    public Role? Role { get; set; }
+    public virtual  Role? Role { get; set; }
 }

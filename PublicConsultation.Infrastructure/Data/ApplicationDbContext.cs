@@ -20,17 +20,4 @@ public class ApplicationDbContext : DbContext
     public DbSet<Opinion> Opinions { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder builder)
-    {
-        base.OnModelCreating(builder);
-
-        // Unique constraints
-        builder.Entity<UserAccount>()
-            .HasIndex(u => u.Email)
-            .IsUnique();
-
-        builder.Entity<UserAccount>()
-            .HasIndex(u => u.Username)
-            .IsUnique();
-    }
 }

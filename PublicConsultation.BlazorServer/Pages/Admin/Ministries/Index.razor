@@ -126,7 +126,7 @@ new BreadcrumbItem("Ministries", href: "/admin/ministries", disabled: false),
 
         if (result == true)
         {
-            await MinistryService.DeleteMinistryAsync(ministry.Id);
+            await MinistryService.DeleteMinistryAsync(ministry.Oid);
             Snackbar.Add("Ministry deleted", Severity.Success);
             await LoadMinistries();
         }

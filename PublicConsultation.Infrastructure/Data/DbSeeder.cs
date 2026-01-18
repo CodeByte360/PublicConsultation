@@ -35,13 +35,13 @@ public static class DbSeeder
                     Email = "admin@consultation.gov.bd",
                     FullNameEnglish = "System Administrator",
                     IsVerified = true,
-                    RoleId = adminRole.Id
+                    RoleId = adminRole.Oid
                 };
-                await authService.RegisterUserAsync(adminUser, "Admin@123", adminRole.Id);
+                await authService.RegisterUserAsync(adminUser, "Admin@123", adminRole.Oid);
             }
             else if (adminUser.Role?.Name != "Admin")
             {
-                adminUser.RoleId = adminRole.Id;
+                adminUser.RoleId = adminRole.Oid;
                 await context.SaveChangesAsync();
             }
         }

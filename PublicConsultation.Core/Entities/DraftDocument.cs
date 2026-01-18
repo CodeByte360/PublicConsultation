@@ -1,11 +1,15 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace PublicConsultation.Core.Entities;
 
 public class DraftDocument : BaseEntity
 {
+
+    [Key]
+    public Guid Oid { get; set; }
     public string Title { get; set; } = string.Empty;
     public string MinistryOrDepartment { get; set; } = string.Empty;
     public string? Description { get; set; }

@@ -35,7 +35,7 @@
             </MudTd>
             <MudTd DataLabel="Actions">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small"
-                    Href="@($"/admin/documents/{context.Id}")" Tooltip="Edit Details" />
+                    Href="@($"/admin/documents/{context.Oid}")" Tooltip="Edit Details" />
                 @if (context.Status == "Draft")
                 {
                     <MudIconButton Icon="@Icons.Material.Filled.Publish" Color="Color.Success" Size="Size.Small"
@@ -44,9 +44,9 @@
                 @if (context.Status == "Published" || context.Status == "Closed")
                 {
                     <MudIconButton Icon="@Icons.Material.Filled.Forum" Color="Color.Info" Size="Size.Small"
-                        Href="@($"/admin/opinions/{context.Id}")" Tooltip="View Opinions" />
+                        Href="@($"/admin/opinions/{context.Oid}")" Tooltip="View Opinions" />
                     <MudIconButton Icon="@Icons.Material.Filled.Assessment" Color="Color.Secondary" Size="Size.Small"
-                        Href="@($"/admin/reports/comparative/{context.Id}")" Tooltip="View Comparative Statement" />
+                        Href="@($"/admin/reports/comparative/{context.Oid}")" Tooltip="View Comparative Statement" />
                 }
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
                     Tooltip="Delete" />
@@ -102,7 +102,7 @@
 <p>You can participate and give your opinion here:</p>
 <p><a href='{NavigationManager.BaseUri}active-consultations'>View All Consultations</a></p>
 <p>Or view this specific document directly:</p>
-<p><a href='{NavigationManager.BaseUri}consultation/{doc.Id}'>{doc.Title}</a></p>
+<p><a href='{NavigationManager.BaseUri}consultation/{doc.Oid}'>{doc.Title}</a></p>
 <br/>
 <p>Thank you for participating in the legislative process.</p>";
 

@@ -1,9 +1,13 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace PublicConsultation.Core.Entities;
 
 public class Opinion : BaseEntity
 {
+
+    [Key]
+    public Guid Oid { get; set; }
     public Guid UserId { get; set; }
     public UserAccount? User { get; set; }
 

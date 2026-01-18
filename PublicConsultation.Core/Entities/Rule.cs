@@ -1,9 +1,13 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace PublicConsultation.Core.Entities;
 
 public class Rule : BaseEntity
 {
+
+    [Key]
+    public Guid Oid { get; set; }
     public Guid DraftDocumentId { get; set; }
     public DraftDocument? DraftDocument { get; set; }
 

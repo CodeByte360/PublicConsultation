@@ -17,7 +17,7 @@ public class DocumentsController : ControllerBase
     [HttpGet("download/{id:guid}")]
     public async Task<IActionResult> Download(Guid id)
     {
-        var document = await _context.DraftDocuments.FirstOrDefaultAsync(d => d.Id == id);
+        var document = await _context.DraftDocuments.FirstOrDefaultAsync(d => d.Oid == id);
         if (document == null)
         {
             return NotFound();
