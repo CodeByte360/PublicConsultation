@@ -30,7 +30,14 @@
                 <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true" Class="ml-4">
                     <ActivatorContent>
                         <MudAvatar Color="Color.Secondary" Size="Size.Medium" Class="cursor-pointer">
-                            @context.User.Identity?.Name?.FirstOrDefault().ToString().ToUpper()
+                            @if (!string.IsNullOrEmpty(_currentUser?.ProfilePictureUrl))
+                            {
+                                <MudImage Src="@_currentUser.ProfilePictureUrl" />
+                            }
+                            else
+                            {
+                                @context.User.Identity?.Name?.FirstOrDefault().ToString().ToUpper()
+                            }
                         </MudAvatar>
                         <MudText Class="ml-3 d-none d-md-block" Typo="Typo.body2"><b>@context.User.Identity?.Name</b>
                         </MudText>
@@ -39,7 +46,14 @@
                     <ChildContent>
                         <div class="pa-4 d-flex flex-column align-center">
                             <MudAvatar Color="Color.Secondary" Size="Size.Large" Class="mb-2">
-                                @context.User.Identity?.Name?.FirstOrDefault().ToString().ToUpper()
+                                @if (!string.IsNullOrEmpty(_currentUser?.ProfilePictureUrl))
+                                {
+                                    <MudImage Src="@_currentUser.ProfilePictureUrl" />
+                                }
+                                else
+                                {
+                                    @context.User.Identity?.Name?.FirstOrDefault().ToString().ToUpper()
+                                }
                             </MudAvatar>
                             <MudText Typo="Typo.subtitle1">@context.User.Identity?.Name</MudText>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">@context.User.Claims.FirstOrDefault(c
@@ -125,14 +139,45 @@
 </MudLayout>
 
 @using PublicConsultation.BlazorServer.Theme
+@using PublicConsultation.Core.Entities
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.DependencyInjection
+@using PublicConsultation.Infrastructure.Data
 @inject NavigationManager NavigationManager
 @inject PublicConsultation.Core.Interfaces.IAuthService AuthService
 @inject IJSRuntime JSRuntime
+
+@inject IServiceScopeFactory ScopeFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
 
 @code {
     bool _drawerOpen = true;
     bool _isDarkMode = false;
     MudTheme _theme = AppTheme.DefaultTheme;
+    UserAccount? _currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = user.FindFirst("UserId");
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                // Create a new scope to avoid EF Core concurrency issues with the page's DbContext
+                using var scope = ScopeFactory.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                _currentUser = await dbContext.UserAccounts.AsNoTracking().FirstOrDefaultAsync(u => u.Oid == userId);
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        // cleanup if needed
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

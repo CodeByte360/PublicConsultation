@@ -19,10 +19,11 @@ public class UserAccount : BaseEntity
     public string? Address { get; set; }
     public string? District { get; set; }
     public string? Division { get; set; }
+    public string? ProfilePictureUrl { get; set; }
     public bool IsVerified { get; set; }
     public bool IsActive { get; set; } = true;
 
     // Foreign Key
     public Guid RoleId { get; set; }
-    public virtual  Role? Role { get; set; }
+    public virtual Role? Role { get; set; }
 }

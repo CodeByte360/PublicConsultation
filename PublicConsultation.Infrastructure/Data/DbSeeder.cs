@@ -9,6 +9,8 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(ApplicationDbContext context, IAuthService authService)
     {
+        await UpdateSchemaAsync(context);
+
         if (!await context.Roles.AnyAsync())
         {
             var roles = new List<Role>
@@ -35,7 +37,8 @@ public static class DbSeeder
                     Email = "admin@consultation.gov.bd",
                     FullNameEnglish = "System Administrator",
                     IsVerified = true,
-                    RoleId = adminRole.Oid
+                    RoleId = adminRole.Oid,
+                    ProfilePictureUrl = "/images/default-profile.png"
                 };
                 await authService.RegisterUserAsync(adminUser, "Admin@123", adminRole.Oid);
             }
@@ -44,6 +47,31 @@ public static class DbSeeder
                 adminUser.RoleId = adminRole.Oid;
                 await context.SaveChangesAsync();
             }
+        }
+    }
+
+    private static async Task UpdateSchemaAsync(ApplicationDbContext context)
+    {
+        try
+        {
+            // Check if column exists, if not add it. 
+            // This is T-SQL specific.
+            var checkSql = @"
+                IF NOT EXISTS (
+                    SELECT * FROM sys.columns 
+                    WHERE object_id = OBJECT_ID(N'[UserAccounts]') 
+                    AND name = 'ProfilePictureUrl'
+                )
+                BEGIN
+                    ALTER TABLE [UserAccounts] ADD [ProfilePictureUrl] nvarchar(max) NULL;
+                END";
+
+            await context.Database.ExecuteSqlRawAsync(checkSql);
+        }
+        catch (Exception ex)
+        {
+            // Log or ignore if it fails (e.g. not SQL Server)
+            Console.WriteLine($"Schema update failed: {ex.Message}");
         }
     }
 }

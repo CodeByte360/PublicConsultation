@@ -28,7 +28,11 @@ builder.Services.AddAuthentication(Microsoft.AspNetCore.Authentication.Cookies.C
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor()
-    .AddCircuitOptions(options => { options.DetailedErrors = true; });
+    .AddCircuitOptions(options => { options.DetailedErrors = true; })
+    .AddHubOptions(options =>
+    {
+        options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
+    });
 builder.Services.AddMudServices();
 
 // Custom Services
@@ -39,6 +43,7 @@ builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAiAnalysisService
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IDuplicateDetectionService, PublicConsultation.Infrastructure.Services.DuplicateDetectionService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAuditLogService, PublicConsultation.Infrastructure.Services.AuditLogService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IMinistryService, PublicConsultation.Infrastructure.Services.MinistryService>();
+builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IFileService, PublicConsultation.Infrastructure.Services.FileService>();
 builder.Services.AddControllers();
 
 var app = builder.Build();

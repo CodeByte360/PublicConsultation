@@ -19,6 +19,7 @@
     <MudTable Items="@Users" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading"
         LoadingProgressColor="Color.Info">
         <HeaderContent>
+            <MudTh>Avatar</MudTh>
             <MudTh>Username</MudTh>
             <MudTh>Email</MudTh>
             <MudTh>Full Name</MudTh>
@@ -28,6 +29,18 @@
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
+            <MudTd DataLabel="Avatar">
+                <MudAvatar Color="Color.Primary" Size="Size.Small">
+                    @if (!string.IsNullOrEmpty(context.ProfilePictureUrl))
+                    {
+                        <MudImage Src="@context.ProfilePictureUrl" />
+                    }
+                    else
+                    {
+                        @(context.FullNameEnglish?.FirstOrDefault().ToString()?.ToUpper() ?? "U")
+                    }
+                </MudAvatar>
+            </MudTd>
             <MudTd DataLabel="Username">@context.Username</MudTd>
             <MudTd DataLabel="Email">@context.Email</MudTd>
             <MudTd DataLabel="Full Name">@context.FullNameEnglish</MudTd>

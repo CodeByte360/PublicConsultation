@@ -7,6 +7,8 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@using PublicConsultation.Core.Interfaces
+@inject IFileService FileService
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
     <div class="d-flex align-center gap-4 mb-6">
@@ -33,6 +35,28 @@
             <MudCardContent>
                 <MudForm @ref="_form" @bind-IsValid="@_success">
                     <MudGrid>
+                        <MudItem xs="12" Class="d-flex flex-column align-center justify-center mb-4">
+                            <MudAvatar Style="height:100px; width:100px; font-size:2rem;" Class="mb-3">
+                                @if (!string.IsNullOrEmpty(_user.ProfilePictureUrl))
+                                {
+                                    <MudImage Src="@_user.ProfilePictureUrl"
+                                        Style="height:100%; width:100%; object-fit:cover;" />
+                                }
+                                else
+                                {
+                                    @(_user.FullNameEnglish?.FirstOrDefault().ToString()?.ToUpper() ?? "U")
+                                }
+                            </MudAvatar>
+                            <MudFileUpload T="IBrowserFile" OnFilesChanged="UploadFiles">
+                                <ActivatorContent>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                        StartIcon="@Icons.Material.Filled.PhotoCamera">
+                                        Change Picture
+                                    </MudButton>
+                                </ActivatorContent>
+                            </MudFileUpload>
+                        </MudItem>
+
                         <MudItem xs="12" sm="6">
                             <MudTextField @bind-Value="_user.FullNameEnglish" Label="Full Name (English)"
                                 Variant="Variant.Outlined" Required="true" />
@@ -106,6 +130,27 @@
             NavigationManager.NavigateTo("/login");
         }
         _loading = false;
+    }
+
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            try
+            {
+                var maxFileSize = 5 * 1024 * 1024;
+                using var stream = file.OpenReadStream(maxFileSize);
+                var url = await FileService.UploadProfilePictureAsync(stream, file.Name);
+                _user.ProfilePictureUrl = url;
+                StateHasChanged();
+                Snackbar.Add("Picture uploaded. Remember to click 'Save Changes'.", Severity.Info);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
+            }
+        }
     }
 
     private async Task SaveChanges()
