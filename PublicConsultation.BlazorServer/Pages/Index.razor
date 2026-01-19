@@ -35,8 +35,7 @@
 
     <MudGrid Class="mt-12" Spacing="4">
         <MudItem xs="12" md="4">
-            <MudPaper Elevation="0" Class="pa-8 h-100 rounded-xl transition-hover"
-                Style="background-color: #f5f7fa; border: 1px solid #eef2f6;">
+            <MudPaper Elevation="0" Outlined="true" Class="pa-8 h-100 rounded-xl transition-hover">
                 <div class="d-flex justify-center mb-6">
                     <div class="pa-4 rounded-circle" style="background-color: rgba(33, 150, 243, 0.1);">
                         <MudIcon Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Large" />
@@ -51,8 +50,7 @@
             </MudPaper>
         </MudItem>
         <MudItem xs="12" md="4">
-            <MudPaper Elevation="0" Class="pa-8 h-100 rounded-xl transition-hover"
-                Style="background-color: #f5f7fa; border: 1px solid #eef2f6;">
+            <MudPaper Elevation="0" Outlined="true" Class="pa-8 h-100 rounded-xl transition-hover">
                 <div class="d-flex justify-center mb-6">
                     <div class="pa-4 rounded-circle" style="background-color: rgba(0, 200, 83, 0.1);">
                         <MudIcon Icon="@Icons.Material.Filled.RecordVoiceOver" Color="Color.Success"
@@ -68,8 +66,7 @@
             </MudPaper>
         </MudItem>
         <MudItem xs="12" md="4">
-            <MudPaper Elevation="0" Class="pa-8 h-100 rounded-xl transition-hover"
-                Style="background-color: #f5f7fa; border: 1px solid #eef2f6;">
+            <MudPaper Elevation="0" Outlined="true" Class="pa-8 h-100 rounded-xl transition-hover">
                 <div class="d-flex justify-center mb-6">
                     <div class="pa-4 rounded-circle" style="background-color: rgba(255, 152, 0, 0.1);">
                         <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Warning" Size="Size.Large" />
@@ -92,9 +89,8 @@
 
         .transition-hover:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
-            background-color: white !important;
-            border-color: #e0e0e0 !important;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2) !important;
+            /* background-color and border-color handled by MudPaper default or theme */
         }
     </style>
 </MudContainer>
