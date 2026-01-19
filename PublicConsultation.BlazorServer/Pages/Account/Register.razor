@@ -62,7 +62,16 @@
                         <MudTextField T="string" Label="NID Number" @bind-Value="registerModel.NIDNumber" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge"/>
                     </MudItem>
                     <MudItem xs="12">
-                        <MudTextField T="string" Label="Address" @bind-Value="registerModel.Address" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Home"/>
+                        <MudTextField T="string" Label="Designation/Occupation" @bind-Value="registerModel.Designation" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Work"/>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="Division" @bind-Value="registerModel.Division" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudTextField T="string" Label="District" @bind-Value="registerModel.District" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField T="string" Label="Address" @bind-Value="registerModel.Address" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Home" Lines="2"/>
                     </MudItem>
                     
                      <MudItem xs="12" Class="d-flex justify-center mt-4">

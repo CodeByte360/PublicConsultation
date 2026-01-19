@@ -1,0 +1,43 @@
+@using PublicConsultation.Core.Entities
+
+<MudDialog>
+    <DialogContent>
+        <MudContainer Style="max-height: 500px; overflow-y: auto;">
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary">TIMESTAMP</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">@AuditLog.CreatedDate.ToString("F")</MudText>
+
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary">ACTIVITY</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">@AuditLog.Activity</MudText>
+
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary">USER ID</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">@AuditLog.RelatedDocumentId</MudText>
+
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary">RELATED DOCUMENT</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">@(AuditLog.RelatedDocument?.Title ?? "N/A")</MudText>
+
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary">DETAILS</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4" Style="white-space: pre-wrap;">@AuditLog.Details</MudText>
+
+            <MudDivider Class="my-2" />
+
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">CURRENT HASH</MudText>
+            <MudText Typo="Typo.caption" Class="mb-2" Style="font-family: monospace; word-break: break-all;">
+                @AuditLog.CurrentHash</MudText>
+
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">PREVIOUS HASH</MudText>
+            <MudText Typo="Typo.caption" Style="font-family: monospace; word-break: break-all;">@AuditLog.PreviousHash
+            </MudText>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public AuditLog AuditLog { get; set; }
+
+    void Cancel() => MudDialog.Cancel();
+}

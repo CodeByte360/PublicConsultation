@@ -6,47 +6,89 @@
 @inject ApplicationDbContext DbContext
 @inject NavigationManager NavigationManager
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
-    <MudText Typo="Typo.h4" GutterBottom="true" Align="Align.Center">Active Public Consultations</MudText>
-    <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-8">Participate in the legislative process by giving
-        your opinion on draft acts and rules.</MudText>
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8 mb-16">
+    <div class="d-flex flex-column align-center mb-10">
+        <MudText Typo="Typo.h3" Class="font-weight-light mb-2" Align="Align.Center">Active Consultations</MudText>
+        <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mud-text-secondary">
+            Review the list of draft legal instruments currently open for public feedback.
+        </MudText>
+        <MudDivider Class="my-6" Style="width:100px; border-width: 3px;" Color="Color.Primary" />
+    </div>
 
     @if (_loading)
     {
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" Class="d-block mx-auto" />
+        <div class="d-flex flex-column align-center py-16">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Class="mt-4">Loading consultations...</MudText>
+        </div>
     }
     else if (!_documents.Any())
     {
-            <MudAlert Severity="Severity.Info" Class="mt-4">No active consultations at the moment.</MudAlert>
+        <div class="d-flex justify-center">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Filled" Class="pa-4 rounded-lg" Style="max-width: 600px;">
+                No active public consultations are available at this moment. Please check back later.
+            </MudAlert>
+        </div>
     }
     else
     {
-            <MudGrid>
+        <MudGrid Spacing="4">
             @foreach (var doc in _documents)
             {
-                        <MudItem xs="12" sm="6" md="4">
-                            <MudCard Elevation="4" Class="h-100 d-flex flex-column">
-                                <MudCardHeader>
-                                    <CardHeaderContent>
-                                        <MudText Typo="Typo.h6">@doc.Title</MudText>
-                                        <MudText Typo="Typo.caption">@doc.MinistryOrDepartment</MudText>
-                                    </CardHeaderContent>
-                                </MudCardHeader>
-                                <MudCardContent Class="flex-grow-1">
-                                    <MudText Typo="Typo.body2" Lines="3">@doc.Description</MudText>
-                                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mt-2">Open until
-                                @doc.ConsultationEndDate.ToShortDateString()</MudChip>
-                                </MudCardContent>
-                                <MudCardActions>
-                                    <MudButton Variant="Variant.Text" Color="Color.Primary"
-                                        EndIcon="@Icons.Material.Filled.ArrowForward" Href="@($"/consultation/{doc.Oid}")">Participate
-                                    </MudButton>
-                                </MudCardActions>
-                            </MudCard>
-                        </MudItem>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="0" Class="h-100 d-flex flex-column rounded-xl"
+                        Style="border: 1px solid #e0e0e0; transition: transform 0.2s; cursor:pointer;"
+                        @onclick='() => NavigationManager.NavigateTo($"/consultation/{doc.Oid}")'>
+                        <div class="pa-4 rounded-t-xl" style="background-color: #f8f9fa; border-bottom: 1px solid #eeeeee;">
+                            <MudChip T="string" Color="Color.Primary" Variant="Variant.Text" Size="Size.Small"
+                                Icon="@Icons.Material.Filled.AccountBalance">@doc.MinistryOrDepartment</MudChip>
+                        </div>
+
+                        <MudCardContent Class="flex-grow-1 pt-4">
+                            <MudText Typo="Typo.h6" Class="font-weight-bold mb-2 line-clamp-2" Style="min-height: 3.2em;">
+                                @doc.Title</MudText>
+                            <MudText Typo="Typo.body2" Class="line-clamp-3 mb-4  mud-text-secondary">
+                                @doc.Description
+                            </MudText>
+
+                            <MudDivider Class="mb-3" />
+
+                            <div class="d-flex align-center justify-space-between">
+                                <div class="d-flex flex-column">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Closing Date</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Error" Class="font-weight-bold">
+                                        <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" Class="mr-1"
+                                            style="vertical-align:text-bottom" />
+                                        @doc.ConsultationEndDate.ToShortDateString()
+                                    </MudText>
+                                </div>
+                                <MudButton Variant="Variant.Text" Color="Color.Primary"
+                                    EndIcon="@Icons.Material.Filled.ArrowForward" Size="Size.Small"
+                                    OnClick="@(() => NavigationManager.NavigateTo($"/consultation/{doc.Oid}"))">Review
+                                </MudButton>
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
             }
-            </MudGrid>
+        </MudGrid>
     }
+
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
 </MudContainer>
 
 @code {

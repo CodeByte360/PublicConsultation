@@ -25,9 +25,21 @@
                 }
             </MudSelect>
 
-            <MudTextField T="string" Label="Full Name" @bind-Value="model.FullNameEnglish" />
+            <MudTextField T="string" Label="Full Name (English)" @bind-Value="model.FullNameEnglish" />
+            <MudTextField T="string" Label="Full Name (Bangla)" @bind-Value="model.FullNameBangla" />
             <MudTextField T="string" Label="Designation" @bind-Value="model.Designation" />
             <MudTextField T="string" Label="Mobile Number" @bind-Value="model.PhoneNumber" />
+            <MudTextField T="string" Label="NID Number" @bind-Value="model.NIDNumber" />
+
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudTextField T="string" Label="Division" @bind-Value="model.Division" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField T="string" Label="District" @bind-Value="model.District" />
+                </MudItem>
+            </MudGrid>
+            <MudTextField T="string" Label="Address" @bind-Value="model.Address" Lines="2" />
         </MudForm>
     </DialogContent>
     <DialogActions>
@@ -58,8 +70,13 @@
         model.Username = User.Username;
         model.Email = User.Email;
         model.FullNameEnglish = User.FullNameEnglish;
+        model.FullNameBangla = User.FullNameBangla;
         model.Designation = User.Designation;
         model.PhoneNumber = User.PhoneNumber;
+        model.NIDNumber = User.NIDNumber;
+        model.Division = User.Division;
+        model.District = User.District;
+        model.Address = User.Address;
         model.RoleId = User.RoleId;
     }
 
@@ -87,8 +104,13 @@
                 userToUpdate.Username = model.Username;
                 userToUpdate.Email = model.Email;
                 userToUpdate.FullNameEnglish = model.FullNameEnglish;
+                userToUpdate.FullNameBangla = model.FullNameBangla;
                 userToUpdate.Designation = model.Designation;
                 userToUpdate.PhoneNumber = model.PhoneNumber;
+                userToUpdate.NIDNumber = model.NIDNumber;
+                userToUpdate.Division = model.Division;
+                userToUpdate.District = model.District;
+                userToUpdate.Address = model.Address;
                 userToUpdate.RoleId = model.RoleId;
 
                 if (!string.IsNullOrWhiteSpace(newPassword))

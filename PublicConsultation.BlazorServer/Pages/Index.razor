@@ -3,54 +3,100 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @using System.Security.Claims
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-16">
-    <div class="d-flex flex-column align-center justify-center py-16"
-        style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; border-radius: 20px;">
-        <MudText Typo="Typo.h2" Align="Align.Center" Class="font-weight-bold mb-4">Digital Public Consultation System
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 mb-16">
+    <div class="d-flex flex-column align-center justify-center py-16 px-4"
+        style="background: linear-gradient(135deg, #1E3C72 0%, #2A5298 100%); color: white; border-radius: 24px; box-shadow: 0 10px 30px rgba(30,60,114,0.3);">
+        <MudText Typo="Typo.h2" Align="Align.Center" Class="font-weight-light mb-2">Digital Public Consultation System
         </MudText>
-        <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-8" Style="max-width: 800px; opacity: 0.9;">
-            Participate in the legislative process. Share your feedback on draft laws and regulations to build a better
-            future together.
+        <MudText Typo="Typo.h5" Align="Align.Center" Class="mb-8 font-weight-light"
+            Style="max-width: 800px; opacity: 0.9;">
+            Empowering citizens to shape the future. Review draft legislation, provide feedback, and participate in the
+            democratic process.
         </MudText>
-        <div class="d-flex gap-4">
-            <MudButton Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Large" Href="/active-consultations"
-                EndIcon="@Icons.Material.Filled.ArrowForward">Browse Consultations</MudButton>
+
+        <div class="d-flex gap-4 flex-wrap justify-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large" Href="/active-consultations"
+                EndIcon="@Icons.Material.Filled.HowToVote" Class="px-8 py-3 rounded-pill shadow-lg">Participate Now
+            </MudButton>
+
             <AuthorizeView>
                 <NotAuthorized>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Large" Href="/login">Sign In
-                        to Participate</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Large" Href="/register"
+                        Class="px-8 py-3 rounded-pill border-2">Join the Platform</MudButton>
                 </NotAuthorized>
+                <Authorized>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Large"
+                        Href="/transparency/audit-log" Class="px-8 py-3 rounded-pill border-2">View Transparency Log
+                    </MudButton>
+                </Authorized>
             </AuthorizeView>
         </div>
     </div>
 
-    <MudGrid Class="mt-16">
+    <MudGrid Class="mt-12" Spacing="4">
         <MudItem xs="12" md="4">
-            <MudCard Elevation="4" Class="pa-6 rounded-lg h-100">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Color="Color.Primary" Size="Size.Large" Class="mb-4" />
-                <MudText Typo="Typo.h6" GutterBottom="true">Transparency</MudText>
-                <MudText Typo="Typo.body2">View upcoming legislative drafts and understand how they impact you before
-                    they become law.</MudText>
-            </MudCard>
+            <MudPaper Elevation="0" Class="pa-8 h-100 rounded-xl transition-hover"
+                Style="background-color: #f5f7fa; border: 1px solid #eef2f6;">
+                <div class="d-flex justify-center mb-6">
+                    <div class="pa-4 rounded-circle" style="background-color: rgba(33, 150, 243, 0.1);">
+                        <MudIcon Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" Size="Size.Large" />
+                    </div>
+                </div>
+                <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true" Class="font-weight-bold">Transparency
+                </MudText>
+                <MudText Typo="Typo.body1" Align="Align.Center" Class="mud-text-secondary">
+                    Access all draft laws and regulations before they are enacted. The system ensures complete
+                    visibility into the legislative drafting process.
+                </MudText>
+            </MudPaper>
         </MudItem>
         <MudItem xs="12" md="4">
-            <MudCard Elevation="4" Class="pa-6 rounded-lg h-100">
-                <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Secondary" Size="Size.Large" Class="mb-4" />
-                <MudText Typo="Typo.h6" GutterBottom="true">Public Voice</MudText>
-                <MudText Typo="Typo.body2">Your opinions are collected and analyzed using AI to ensure every unique
-                    perspective is considered by the Ministry.</MudText>
-            </MudCard>
+            <MudPaper Elevation="0" Class="pa-8 h-100 rounded-xl transition-hover"
+                Style="background-color: #f5f7fa; border: 1px solid #eef2f6;">
+                <div class="d-flex justify-center mb-6">
+                    <div class="pa-4 rounded-circle" style="background-color: rgba(0, 200, 83, 0.1);">
+                        <MudIcon Icon="@Icons.Material.Filled.RecordVoiceOver" Color="Color.Success"
+                            Size="Size.Large" />
+                    </div>
+                </div>
+                <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true" Class="font-weight-bold">Public Voice
+                </MudText>
+                <MudText Typo="Typo.body1" Align="Align.Center" Class="mud-text-secondary">
+                    Your voice matters. Submit your opinions, suggestions, and objections directly to the relevant
+                    ministries. Every feedback is recorded.
+                </MudText>
+            </MudPaper>
         </MudItem>
         <MudItem xs="12" md="4">
-            <MudCard Elevation="4" Class="pa-6 rounded-lg h-100">
-                <MudIcon Icon="@Icons.Material.Filled.Assessment" Color="Color.Success" Size="Size.Large"
-                    Class="mb-4" />
-                <MudText Typo="Typo.h6" GutterBottom="true">Accountability</MudText>
-                <MudText Typo="Typo.body2">The system generates comparative statements showing user feedback vs.
-                    existing law for full accountability.</MudText>
-            </MudCard>
+            <MudPaper Elevation="0" Class="pa-8 h-100 rounded-xl transition-hover"
+                Style="background-color: #f5f7fa; border: 1px solid #eef2f6;">
+                <div class="d-flex justify-center mb-6">
+                    <div class="pa-4 rounded-circle" style="background-color: rgba(255, 152, 0, 0.1);">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Warning" Size="Size.Large" />
+                    </div>
+                </div>
+                <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true" Class="font-weight-bold">Accountability
+                </MudText>
+                <MudText Typo="Typo.body1" Align="Align.Center" Class="mud-text-secondary">
+                    Ministries are accountable to consider public feedback. The system tracks how your input influenced
+                    the final legislation.
+                </MudText>
+            </MudPaper>
         </MudItem>
     </MudGrid>
+
+    <style>
+        .transition-hover {
+            transition: all 0.3s ease;
+        }
+
+        .transition-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+            background-color: white !important;
+            border-color: #e0e0e0 !important;
+        }
+    </style>
 </MudContainer>
 
 @code {

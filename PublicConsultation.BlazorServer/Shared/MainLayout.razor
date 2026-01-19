@@ -1,75 +1,161 @@
 ﻿@inherits LayoutComponentBase
 
-<MudThemeProvider />
+<MudThemeProvider Theme="_theme" @bind-IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="1">
+    <MudAppBar Elevation="2" Color="Color.Primary" Dense="false" Height="64">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
-            OnClick="@((e) => DrawerToggle())" />
-        <MudImage Src="images/logo.png" Height="40" Class="ml-3 mr-3" />
-        <MudText Typo="Typo.h6">Digital Public Consultation System</MudText>
+            OnClick="@((e) => DrawerToggle())" Class="mr-3" />
+
+        <div class="d-flex align-center">
+            <MudImage Src="images/logo.png" Height="40" Class="mr-3" />
+            <div class="d-none d-md-flex flex-column">
+                <MudText Typo="Typo.h6" Style="font-weight: 700; line-height: 1.2;">Digital Public Consultation
+                </MudText>
+                <MudText Typo="Typo.caption" Style="opacity: 0.8; letter-spacing: 1px;">GOVERNMENT OF THE PEOPLE'S
+                    REPUBLIC</MudText>
+            </div>
+        </div>
+
         <MudSpacer />
+
+        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)"
+            Color="Color.Inherit" OnClick="@DarkModeToggle" Title="Toggle Light/Dark Mode" />
+
         <AuthorizeView>
             <Authorized>
-                <MudText Class="mr-4">Hello, @context.User.Identity?.Name</MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="Logout">Logout</MudButton>
+                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true" Class="ml-4">
+                    <ActivatorContent>
+                        <MudAvatar Color="Color.Secondary" Size="Size.Medium" Class="cursor-pointer">
+                            @context.User.Identity?.Name?.FirstOrDefault().ToString().ToUpper()
+                        </MudAvatar>
+                        <MudText Class="ml-3 d-none d-md-block" Typo="Typo.body2"><b>@context.User.Identity?.Name</b>
+                        </MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Color="Color.Inherit" />
+                    </ActivatorContent>
+                    <ChildContent>
+                        <div class="pa-4 d-flex flex-column align-center">
+                            <MudAvatar Color="Color.Secondary" Size="Size.Large" Class="mb-2">
+                                @context.User.Identity?.Name?.FirstOrDefault().ToString().ToUpper()
+                            </MudAvatar>
+                            <MudText Typo="Typo.subtitle1">@context.User.Identity?.Name</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.User.Claims.FirstOrDefault(c
+                                => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value</MudText>
+                        </div>
+                        <MudDivider Class="mb-2" />
+                        <MudMenuItem Icon="@Icons.Material.Filled.Person" Href="/account/profile">My Profile
+                        </MudMenuItem>
+                        <MudMenuItem Icon="@Icons.Material.Filled.Settings">Account Settings</MudMenuItem>
+                        <MudDivider Class="my-2" />
+                        <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="Logout">Sign Out</MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
             </Authorized>
+            <NotAuthorized>
+                <MudButton Href="/login" Variant="Variant.Filled" Color="Color.Secondary" Class="ml-2">Login</MudButton>
+                <MudButton Href="/register" Variant="Variant.Outlined" Color="Color.Inherit" Class="ml-2">Register
+                </MudButton>
+            </NotAuthorized>
         </AuthorizeView>
     </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <MudNavMenu>
+
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2"
+        Variant="@DrawerVariant.Responsive">
+        <MudDrawerHeader Class="d-flex align-center justify-center pa-4"
+            Style="background-color: var(--mud-palette-background-gray);">
+            <MudText Typo="Typo.h6" Color="Color.Primary" Align="Align.Center"><b>Navigation</b></MudText>
+        </MudDrawerHeader>
+        <MudNavMenu Class="pt-2">
             <AuthorizeView>
                 <Authorized>
                     <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
 
                     <AuthorizeView Roles="Admin" Context="adminContext">
-                        <MudNavGroup Title="Admin" Icon="@Icons.Material.Filled.AdminPanelSettings">
-                            <MudNavLink Href="/admin/dashboard" Match="NavLinkMatch.Prefix">Dashboard</MudNavLink>
-                            <MudNavLink Href="/admin/users" Match="NavLinkMatch.Prefix">User Management</MudNavLink>
-                            <MudNavLink Href="/admin/ministries" Match="NavLinkMatch.Prefix">Ministries</MudNavLink>
-                        </MudNavGroup>
+                        <MudText Typo="Typo.overline" Class="ml-4 mt-4 mb-2 d-block" Color="Color.Secondary">
+                            <b>Administration</b>
+                        </MudText>
+                        <MudNavLink Href="/admin/dashboard" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+                        <MudNavLink Href="/admin/users" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Filled.People">User Management</MudNavLink>
+                        <MudNavLink Href="/admin/ministries" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Filled.AccountBalance">Ministries</MudNavLink>
                     </AuthorizeView>
 
                     <AuthorizeView Roles="Admin,Official" Context="officialContext">
-                        <MudNavGroup Title="Officer / Official" Icon="@Icons.Material.Filled.Work">
-                            <MudNavLink Href="/transparency/audit-log" Match="NavLinkMatch.Prefix">Transparency Audit
-                                Log</MudNavLink>
-                            <MudNavLink Href="/admin/documents" Match="NavLinkMatch.Prefix">Draft Documents</MudNavLink>
-                            <MudNavLink Href="/admin/opinions" Match="NavLinkMatch.Prefix">Public Feedback</MudNavLink>
-                        </MudNavGroup>
+                        <MudText Typo="Typo.overline" Class="ml-4 mt-4 mb-2 d-block" Color="Color.Secondary"><b>Official
+                                Tasks</b></MudText>
+                        <MudNavLink Href="/admin/documents" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Filled.Description">Draft Documents</MudNavLink>
+                        <MudNavLink Href="/admin/opinions" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Filled.Forum">Public Feedback</MudNavLink>
+                        <MudNavLink Href="/transparency/audit-log" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Filled.History">Transparency Log</MudNavLink>
                     </AuthorizeView>
 
                     <AuthorizeView Roles="Citizen" Context="citizenContext">
-                        <MudDivider Class="my-2" />
-                        <MudNavGroup Title="Citizen" Icon="@Icons.Material.Filled.People" Expanded="true">
-                            <MudNavLink Href="/citizen/dashboard" Match="NavLinkMatch.Prefix">Dashboard</MudNavLink>
-                            <MudNavLink Href="/active-consultations" Match="NavLinkMatch.Prefix">Public Consultations
-                            </MudNavLink>
-                        </MudNavGroup>
+                        <MudText Typo="Typo.overline" Class="ml-4 mt-4 mb-2 d-block" Color="Color.Secondary"><b>Citizen
+                                Portal</b></MudText>
+                        <MudNavLink Href="/citizen/dashboard" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+                        <MudNavLink Href="/active-consultations" Match="NavLinkMatch.Prefix"
+                            Icon="@Icons.Material.Filled.HowToVote">Active Consultations</MudNavLink>
                     </AuthorizeView>
                 </Authorized>
+                <NotAuthorized>
+                    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+                    <MudNavLink Href="/active-consultations" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.HowToVote">Browse Consultations</MudNavLink>
+                    <MudNavLink Href="/about" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Info">About
+                        System</MudNavLink>
+                </NotAuthorized>
             </AuthorizeView>
         </MudNavMenu>
     </MudDrawer>
-    <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.Large" Class="my-4 pt-4">
+
+    <MudMainContent Class="d-flex flex-column" Style="min-height: 100vh;">
+        <MudContainer MaxWidth="MaxWidth.Large" Class="flex-grow-1 my-8 pt-4">
             @Body
         </MudContainer>
+        <MainFooter />
     </MudMainContent>
 </MudLayout>
 
+@using PublicConsultation.BlazorServer.Theme
 @inject NavigationManager NavigationManager
 @inject PublicConsultation.Core.Interfaces.IAuthService AuthService
+@inject IJSRuntime JSRuntime
 
 @code {
     bool _drawerOpen = true;
+    bool _isDarkMode = false;
+    MudTheme _theme = AppTheme.DefaultTheme;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var isDark = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "darkMode");
+            if (bool.TryParse(isDark, out var result))
+            {
+                _isDarkMode = result;
+                StateHasChanged();
+            }
+        }
+    }
 
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
+    }
+
+    async Task DarkModeToggle()
+    {
+        _isDarkMode = !_isDarkMode;
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "darkMode", _isDarkMode.ToString());
     }
 
     private void Logout()

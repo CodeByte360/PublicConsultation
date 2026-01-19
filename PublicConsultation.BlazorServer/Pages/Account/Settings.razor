@@ -1,0 +1,133 @@
+@page "/account/settings"
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <div class="d-flex align-center gap-4 mb-6">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Href="/account/profile" />
+        <MudText Typo="Typo.h4">Account Settings</MudText>
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (_user == null)
+    {
+        <MudAlert Severity="Severity.Error">User profile not found.</MudAlert>
+    }
+    else
+    {
+        <MudCard Elevation="3">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Edit Profile</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudForm @ref="_form" @bind-IsValid="@_success">
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_user.FullNameEnglish" Label="Full Name (English)"
+                                Variant="Variant.Outlined" Required="true" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_user.FullNameBangla" Label="Full Name (Bangla)"
+                                Variant="Variant.Outlined" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_user.PhoneNumber" Label="Phone Number" Variant="Variant.Outlined"
+                                InputType="InputType.Telephone" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_user.NIDNumber" Label="NID Number" Variant="Variant.Outlined" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_user.Designation" Label="Designation/Occupation"
+                                Variant="Variant.Outlined" />
+                        </MudItem>
+
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_user.Division" Label="Division" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_user.District" Label="District" Variant="Variant.Outlined" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_user.Address" Label="Address" Variant="Variant.Outlined"
+                                Lines="2" />
+                        </MudItem>
+                    </MudGrid>
+                </MudForm>
+            </MudCardContent>
+            <MudCardActions Class="d-flex justify-end pa-4 gap-2">
+                <MudButton Variant="Variant.Text" Color="Color.Default" Href="/account/profile">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!_success || _isSaving)"
+                    OnClick="SaveChanges">
+                    @(_isSaving ? "Saving..." : "Save Changes")
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    }
+</MudContainer>
+
+@code {
+    private UserAccount? _user;
+    private bool _loading = true;
+    private bool _isSaving = false;
+    private MudForm _form;
+    private bool _success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = user.FindFirst("UserId");
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                // Load tracked entity for update
+                _user = await DbContext.UserAccounts.FirstOrDefaultAsync(u => u.Oid == userId);
+            }
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/login");
+        }
+        _loading = false;
+    }
+
+    private async Task SaveChanges()
+    {
+        if (_user == null) return;
+
+        _isSaving = true;
+        try
+        {
+            await DbContext.SaveChangesAsync();
+            Snackbar.Add("Profile updated successfully!", Severity.Success);
+            await Task.Delay(1000);
+            NavigationManager.NavigateTo("/account/profile");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Snackbar.Add("Failed to update profile. Please try again.", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

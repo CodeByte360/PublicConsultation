@@ -1,0 +1,53 @@
+<MudPaper Elevation="0" Class="py-10 px-4 mt-auto" Style="background-color: var(--mud-palette-surface); border-top: 1px solid var(--mud-palette-divider);">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <div class="d-flex align-center mb-2">
+                     <MudIcon Icon="@Icons.Material.Filled.Public" Class="mr-2" Color="Color.Primary"/>
+                     <MudText Typo="Typo.h6" Color="Color.Primary"><b>DPCS</b></MudText>
+                </div>
+                <MudText Typo="Typo.body2" Class="mb-4">
+                    The Digital Public Consultation System allows citizens to actively participate in the legislative process, ensuring transparency and accountability in governance.
+                </MudText>
+                <MudText Typo="Typo.caption" Color="Color.Default">
+                    © @DateTime.Now.Year Government of [Country]. All rights reserved.
+                </MudText>
+            </MudItem>
+
+            <MudItem xs="6" md="2">
+                <MudText Typo="Typo.subtitle1" Class="mb-2" Color="Color.Primary"><b>Quick Links</b></MudText>
+                <div class="d-flex flex-column gap-1">
+                    <MudLink Href="/" Color="Color.Default" Underline="Underline.None">Home</MudLink>
+                    <MudLink Href="/active-consultations" Color="Color.Default" Underline="Underline.None">Consultations</MudLink>
+                    <MudLink Href="/about" Color="Color.Default" Underline="Underline.None">About Us</MudLink>
+                    <MudLink Href="/help" Color="Color.Default" Underline="Underline.None">Help Center</MudLink>
+                </div>
+            </MudItem>
+
+             <MudItem xs="6" md="2">
+                <MudText Typo="Typo.subtitle1" Class="mb-2" Color="Color.Primary"><b>Legal</b></MudText>
+                <div class="d-flex flex-column gap-1">
+                    <MudLink Href="/privacy" Color="Color.Default" Underline="Underline.None">Privacy Policy</MudLink>
+                    <MudLink Href="/terms" Color="Color.Default" Underline="Underline.None">Terms of Service</MudLink>
+                    <MudLink Href="/transparency/audit-log" Color="Color.Default" Underline="Underline.None">Transparency Audit</MudLink>
+                </div>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                 <MudText Typo="Typo.subtitle1" Class="mb-2" Color="Color.Primary"><b>Contact Support</b></MudText>
+                 <MudText Typo="Typo.body2" Class="mb-1">
+                    <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" Class="mr-1" style="vertical-align:middle"/> support@dpcs.gov.bd
+                 </MudText>
+                 <MudText Typo="Typo.body2">
+                    <MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Small" Class="mr-1" style="vertical-align:middle"/> +880 1234-567890
+                 </MudText>
+                 <div class="mt-4">
+                     <MudIconButton Icon="@Icons.Custom.Brands.Facebook" Color="Color.Primary" Size="Size.Small" />
+                     <MudIconButton Icon="@Icons.Custom.Brands.Twitter" Color="Color.Primary" Size="Size.Small" />
+                     <MudIconButton Icon="@Icons.Custom.Brands.LinkedIn" Color="Color.Primary" Size="Size.Small" />
+                     <MudIconButton Icon="@Icons.Custom.Brands.YouTube" Color="Color.Primary" Size="Size.Small" />
+                 </div>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+</MudPaper>

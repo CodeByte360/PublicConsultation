@@ -1,0 +1,116 @@
+@page "/account/profile"
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@inject ApplicationDbContext DbContext
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudText Typo="Typo.h4" Class="mb-6">My Profile</MudText>
+
+    @if (_loading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (_user == null)
+    {
+        <MudAlert Severity="Severity.Error">User profile not found.</MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="4" Class="h-100">
+                    <MudCardContent Class="d-flex flex-column align-center py-8">
+                        <MudAvatar Color="Color.Primary" Style="height:100px; width:100px; font-size:3rem;" Class="mb-4">
+                            @(_user.FullNameEnglish?.FirstOrDefault().ToString()?.ToUpper() ?? "U")
+                        </MudAvatar>
+                        <MudText Typo="Typo.h5" Align="Align.Center">@_user.FullNameEnglish</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">@_user.Designation</MudText>
+
+                        <MudChip T="string" Color="@(_user.IsVerified ? Color.Success : Color.Warning)" Class="mt-4"
+                            Variant="Variant.Outlined">
+                            @(_user.IsVerified ? "Verified Citizen" : "Unverified Account")
+                        </MudChip>
+
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Class="mt-6" FullWidth="true"
+                            StartIcon="@Icons.Material.Filled.Edit" Href="/account/settings">
+                            Edit Profile
+                        </MudButton>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" md="8">
+                <MudCard Elevation="4" Class="h-100">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Personal Information</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudGrid>
+                            <MudItem xs="12" sm="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Full Name (Bangla)</MudText>
+                                <MudText Typo="Typo.body1">@(_user.FullNameBangla ?? "N/A")</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">NID Number</MudText>
+                                <MudText Typo="Typo.body1">@(_user.NIDNumber ?? "N/A")</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Email Address</MudText>
+                                <MudText Typo="Typo.body1">@_user.Email</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Phone Number</MudText>
+                                <MudText Typo="Typo.body1">@(_user.PhoneNumber ?? "N/A")</MudText>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudDivider Class="my-2" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Division</MudText>
+                                <MudText Typo="Typo.body1">@(_user.Division ?? "N/A")</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">District</MudText>
+                                <MudText Typo="Typo.body1">@(_user.District ?? "N/A")</MudText>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Address</MudText>
+                                <MudText Typo="Typo.body1">@(_user.Address ?? "N/A")</MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    private UserAccount? _user;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = user.FindFirst("UserId");
+            if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                _user = await DbContext.UserAccounts.FirstOrDefaultAsync(u => u.Oid == userId);
+            }
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/login");
+        }
+        _loading = false;
+    }
+}

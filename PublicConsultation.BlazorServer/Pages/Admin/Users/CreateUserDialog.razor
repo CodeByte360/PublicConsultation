@@ -23,7 +23,21 @@
                 }
             </MudSelect>
 
-            <MudTextField T="string" Label="Full Name" @bind-Value="model.FullNameEnglish" />
+            <MudTextField T="string" Label="Full Name (English)" @bind-Value="model.FullNameEnglish" />
+            <MudTextField T="string" Label="Full Name (Bangla)" @bind-Value="model.FullNameBangla" />
+            <MudTextField T="string" Label="Designation" @bind-Value="model.Designation" />
+            <MudTextField T="string" Label="Mobile Number" @bind-Value="model.PhoneNumber" />
+            <MudTextField T="string" Label="NID Number" @bind-Value="model.NIDNumber" />
+
+            <MudGrid>
+                <MudItem xs="6">
+                    <MudTextField T="string" Label="Division" @bind-Value="model.Division" />
+                </MudItem>
+                <MudItem xs="6">
+                    <MudTextField T="string" Label="District" @bind-Value="model.District" />
+                </MudItem>
+            </MudGrid>
+            <MudTextField T="string" Label="Address" @bind-Value="model.Address" Lines="2" />
         </MudForm>
     </DialogContent>
     <DialogActions>

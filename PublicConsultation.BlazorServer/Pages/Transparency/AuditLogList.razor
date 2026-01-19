@@ -11,6 +11,8 @@
         immutable-style audit log.
     </MudText>
 
+    @inject IDialogService DialogService
+
     @if (_loading)
     {
         <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
@@ -30,7 +32,7 @@
                 <MudTh>Activity</MudTh>
                 <MudTh>Document</MudTh>
                 <MudTh>Details</MudTh>
-                <MudTh>Hash (Chain)</MudTh>
+                <MudTh>Action</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Timestamp">@context.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
@@ -40,13 +42,15 @@
                 <MudTd DataLabel="Document">
                     @(context.RelatedDocument?.Title ?? "N/A")
                 </MudTd>
-                <MudTd DataLabel="Details">@context.Details</MudTd>
-                <MudTd DataLabel="Hash">
-                    <MudTooltip Text="@($"Previous: {context.PreviousHash}")">
-                        <MudText Typo="Typo.caption" Class="text-truncate" Style="max-width: 100px;">
-                            @context.CurrentHash
-                        </MudText>
-                    </MudTooltip>
+                <MudTd DataLabel="Details">
+                    <MudText Typo="Typo.body2"
+                        Style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                        @context.Details
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="Action">
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
+                        OnClick="@(() => OpenDetails(context))">View Details</MudButton>
                 </MudTd>
             </RowTemplate>
             <PagerContent>
@@ -63,7 +67,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        try 
+        try
         {
             _logs = await AuditLogService.GetLogsAsync();
             _isIntegrityVerified = await AuditLogService.VerifyIntegrityAsync();
@@ -77,5 +81,12 @@
         {
             _loading = false;
         }
+    }
+
+    private void OpenDetails(AuditLog log)
+    {
+        var parameters = new DialogParameters { ["AuditLog"] = log };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        DialogService.Show<AuditLogDetailsDialog>("Audit Log Entry", parameters, options);
     }
 }
