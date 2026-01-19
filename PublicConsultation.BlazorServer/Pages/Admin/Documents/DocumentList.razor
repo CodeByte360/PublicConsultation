@@ -4,6 +4,7 @@
 @using PublicConsultation.Infrastructure.Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
+@using PublicConsultation.Infrastructure.Services
 @inject ApplicationDbContext DbContext
 @inject NavigationManager NavigationManager
 @inject PublicConsultation.Core.Interfaces.IEmailService EmailService
@@ -88,23 +89,22 @@
     private async Task NotifyCitizensAsync(DraftDocument doc)
     {
         var citizens = await DbContext.UserAccounts
-        .Where(u => u.Role.Name == "Citizen")
+        .Where(u => u.Role.Name == "Citizen" && u.IsActive)
         .Select(u => u.Email)
         .ToListAsync();
 
         if (citizens.Any())
         {
             var subject = $"New Public Consultation: {doc.Title}";
-            var body = $@"
-<h3>New Consultation Published</h3>
-<p>The ministry has published a new draft document for public consultation: <strong>{doc.Title}</strong></p>
-<p>Ministry: {doc.MinistryOrDepartment}</p>
-<p>You can participate and give your opinion here:</p>
-<p><a href='{NavigationManager.BaseUri}active-consultations'>View All Consultations</a></p>
-<p>Or view this specific document directly:</p>
-<p><a href='{NavigationManager.BaseUri}consultation/{doc.Oid}'>{doc.Title}</a></p>
-<br/>
-<p>Thank you for participating in the legislative process.</p>";
+            var viewAllUrl = $"{NavigationManager.BaseUri}active-consultations";
+            var viewDocUrl = $"{NavigationManager.BaseUri}consultation/{doc.Oid}";
+
+            var body = EmailTemplateHelper.GetConsultationNotificationHtml(
+            doc.Title,
+            doc.MinistryOrDepartment,
+            doc.Description ?? "",
+            viewAllUrl,
+            viewDocUrl);
 
             await EmailService.SendBulkEmailAsync(citizens, subject, body);
         }

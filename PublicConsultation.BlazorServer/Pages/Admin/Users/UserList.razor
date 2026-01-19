@@ -4,9 +4,11 @@
 @using PublicConsultation.Infrastructure.Data
 @using Microsoft.EntityFrameworkCore
 @using Microsoft.AspNetCore.Authorization
+@inject IAuthService AuthService
 @inject ApplicationDbContext DbContext
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@using MudBlazor
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <div class="d-flex justify-space-between align-center mb-4">
@@ -22,6 +24,8 @@
             <MudTh>Full Name</MudTh>
             <MudTh>Role</MudTh>
             <MudTh>Verified</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Username">@context.Username</MudTd>
@@ -45,6 +49,15 @@
                             OnClick="@(() => ToggleVerification(context))" />
                     </MudTooltip>
                 }
+            </MudTd>
+            <MudTd DataLabel="Status">
+                <MudSwitch T="bool" @bind-Value="@context.IsActive" Color="Color.Success"
+                    Converter="@(new StatusConverter(DbContext, Snackbar))"
+                    Label="@(context.IsActive ? "Active" : "Inactive")" />
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info"
+                    OnClick="@(() => EditUser(context))" />
             </MudTd>
         </RowTemplate>
     </MudTable>
@@ -70,6 +83,19 @@
     {
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         var dialog = DialogService.Show<CreateUserDialog>("Create New User", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadUsers();
+        }
+    }
+
+    private async Task EditUser(UserAccount user)
+    {
+        var parameters = new DialogParameters { ["User"] = user };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = DialogService.Show<EditUserDialog>("Edit User", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)
@@ -106,6 +132,41 @@
                 user.IsVerified = originalStatus; // Revert on failure
                 Snackbar.Add($"Error updating user verification: {ex.Message}", Severity.Error);
             }
+        }
+    }
+
+    private class StatusConverter : BoolConverter<bool>
+    {
+        private readonly ApplicationDbContext _db;
+        private readonly ISnackbar _snackbar;
+
+        public StatusConverter(ApplicationDbContext db, ISnackbar snackbar)
+        {
+            _db = db;
+            _snackbar = snackbar;
+
+            SetFunc = (val) =>
+            {
+                // This is called when the switch is toggled.
+                // However, MudSwitch with @bind-Value handles the update.
+                // We want to trigger the DB save.
+                return val;
+            };
+        }
+    }
+
+    private async Task OnStatusChanged(UserAccount user)
+    {
+        try
+        {
+            DbContext.UserAccounts.Update(user);
+            await DbContext.SaveChangesAsync();
+            Snackbar.Add($"User {(user.IsActive ? "activated" : "deactivated")} successfully.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            user.IsActive = !user.IsActive; // Revert
+            Snackbar.Add($"Error updating status: {ex.Message}", Severity.Error);
         }
     }
 }

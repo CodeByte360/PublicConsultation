@@ -1,0 +1,111 @@
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@inject IAuthService AuthService
+@inject ApplicationDbContext DbContext
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudTextField T="string" Label="Username" Required="true" @bind-Value="model.Username" />
+            <MudTextField T="string" Label="Email" Required="true" InputType="InputType.Email"
+                @bind-Value="model.Email" />
+
+            <MudTextField T="string" Label="New Password (leave blank to keep current)" InputType="InputType.Password"
+                @bind-Value="newPassword" Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon"
+                OnAdornmentClick="TogglePasswordVisibility" />
+
+            <MudSelect T="Guid" Label="Role" Required="true" @bind-Value="model.RoleId"
+                AnchorOrigin="Origin.BottomCenter">
+                @foreach (var role in Roles)
+                {
+                    <MudSelectItem Value="@role.Oid">@role.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField T="string" Label="Full Name" @bind-Value="model.FullNameEnglish" />
+            <MudTextField T="string" Label="Designation" @bind-Value="model.Designation" />
+            <MudTextField T="string" Label="Mobile Number" @bind-Value="model.PhoneNumber" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!success)">Save Changes</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public UserAccount User { get; set; }
+
+    MudForm form;
+    bool success;
+    UserAccount model = new UserAccount();
+    string newPassword;
+    List<Role> Roles = new List<Role>();
+
+    bool _passwordVisible = false;
+    string _passwordInputIcon => _passwordVisible ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Roles = await DbContext.Roles.ToListAsync();
+
+        // Map existing user to model
+        model.Oid = User.Oid;
+        model.Username = User.Username;
+        model.Email = User.Email;
+        model.FullNameEnglish = User.FullNameEnglish;
+        model.Designation = User.Designation;
+        model.PhoneNumber = User.PhoneNumber;
+        model.RoleId = User.RoleId;
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        _passwordVisible = !_passwordVisible;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            try
+            {
+                var userToUpdate = await DbContext.UserAccounts.FindAsync(model.Oid);
+                if (userToUpdate == null)
+                {
+                    Snackbar.Add("User not found.", Severity.Error);
+                    return;
+                }
+
+                userToUpdate.Username = model.Username;
+                userToUpdate.Email = model.Email;
+                userToUpdate.FullNameEnglish = model.FullNameEnglish;
+                userToUpdate.Designation = model.Designation;
+                userToUpdate.PhoneNumber = model.PhoneNumber;
+                userToUpdate.RoleId = model.RoleId;
+
+                if (!string.IsNullOrWhiteSpace(newPassword))
+                {
+                    userToUpdate.PasswordHash = AuthService.HashPassword(newPassword);
+                }
+
+                DbContext.UserAccounts.Update(userToUpdate);
+                await DbContext.SaveChangesAsync();
+
+                Snackbar.Add("User updated successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

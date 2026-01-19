@@ -20,6 +20,7 @@ public class UserAccount : BaseEntity
     public string? District { get; set; }
     public string? Division { get; set; }
     public bool IsVerified { get; set; }
+    public bool IsActive { get; set; } = true;
 
     // Foreign Key
     public Guid RoleId { get; set; }
