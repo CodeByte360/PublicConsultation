@@ -3,7 +3,13 @@
 @using PublicConsultation.Core.Interfaces
 @inject IAuthService AuthService
 @inject NavigationManager NavigationManager
-@inject ISnackbar Snackbar
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@using System.IO
+@using Microsoft.AspNetCore.Components.Forms
+@inject IFileService FileService
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="d-flex align-center justify-center mud-width-full" Style="min-height: 90vh;">
     <MudCard Elevation="25" Class="pa-8 my-8" Style="width: 100%; border-radius: 12px;">
@@ -23,7 +29,28 @@
                         <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-1"><strong>Account Credentials</strong></MudText>
                         <MudDivider Class="mb-4" />
                     </MudItem>
-                    
+ 
+                    <MudItem xs="12" Class="d-flex flex-column align-center justify-center">
+                         <MudAvatar Color="Color.Primary" Style="height:100px; width:100px; font-size:3rem;" Class="mb-2">
+                            @if (!string.IsNullOrEmpty(registerModel.ProfilePictureUrl))
+                            {
+                                <MudImage Src="@registerModel.ProfilePictureUrl" Style="height:100%; width:100%; object-fit:cover;" />
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+                            }
+                        </MudAvatar>
+                        <MudFileUpload T="IBrowserFile" OnFilesChanged="UploadFiles">
+                            <ActivatorContent>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                    StartIcon="@Icons.Material.Filled.CloudUpload">
+                                    Upload Profile Picture
+                                </MudButton>
+                            </ActivatorContent>
+                        </MudFileUpload>
+                    </MudItem>
+
                     <MudItem xs="12" sm="6">
                         <MudTextField T="string" Label="Username" Required="true" RequiredError="Username is required!"
                                       @bind-Value="registerModel.Username" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"/>
@@ -102,6 +129,27 @@
     {
         if (password != arg)
             yield return "Passwords don't match";
+    }
+
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file != null)
+        {
+            try
+            {
+                var maxFileSize = 5 * 1024 * 1024;
+                using var stream = file.OpenReadStream(maxFileSize);
+                var url = await FileService.UploadProfilePictureAsync(stream, file.Name);
+                registerModel.ProfilePictureUrl = url;
+                StateHasChanged();
+                Snackbar.Add("Picture uploaded.", Severity.Info);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Upload failed: {ex.Message}", Severity.Error);
+            }
+        }
     }
 
     private async Task Submit()
