@@ -5,22 +5,36 @@
 
 <MudDialog>
     <TitleContent>
-        <MudText Typo="Typo.h6" Class="d-flex align-center">
-            <MudIcon Icon="@Icons.Material.Filled.Business" Class="mr-3" />
-            @(Ministry.Oid == Guid.Empty ? "Add Ministry" : "Edit Ministry")
-        </MudText>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Class="mr-3" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h6">@(Ministry.Oid == Guid.Empty ? "Register New Ministry" : "Update Ministry Details")</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Manage the ministries and departments involved in consultations.</MudText>
+            </div>
+        </div>
     </TitleContent>
     <DialogContent>
-        <MudForm @ref="form" @bind-IsValid="@success" Class="px-4 py-4">
-            <MudTextField T="string" Label="Name" Required="true" @bind-Value="Ministry.Name" Variant="Variant.Outlined"
-                Class="mb-3" />
-            <MudTextField T="string" Label="Description" Lines="3" @bind-Value="Ministry.Description"
-                Variant="Variant.Outlined" />
+        <MudForm @ref="form" @bind-IsValid="@success" Class="pt-4">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Ministry Name" Required="true" @bind-Value="Ministry.Name" 
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Title" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Description / Mandate" Lines="4" @bind-Value="Ministry.Description"
+                                  Variant="Variant.Outlined" Adornment="Adornment.Start" 
+                                  AdornmentIcon="@Icons.Material.Filled.Description" />
+                </MudItem>
+            </MudGrid>
         </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Save</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Class="px-6">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" 
+                   StartIcon="@Icons.Material.Filled.Save" Class="px-8">
+            @(Ministry.Oid == Guid.Empty ? "Register" : "Update")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 

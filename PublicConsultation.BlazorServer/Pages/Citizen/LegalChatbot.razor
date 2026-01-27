@@ -2,33 +2,60 @@
 @inject IAiAnalysisService AiService
 
 <MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Forum" Class="mr-3" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h6">AI Legislative Assistant</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Ask complex legal questions and get instant
+                    AI-powered insights about this draft.</MudText>
+            </div>
+        </div>
+    </TitleContent>
     <DialogContent>
-        <div style="height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;" class="mb-4">
-            <div class="pa-3 mud-alert-info mud-elevation-1 rounded">
-                <MudText Typo="Typo.body2">Hello! I am your Legal Assistant. Ask me anything about this draft document.
+        <div style="height: 450px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 10px;"
+            class="mb-4 mud-background-gray rounded shadow-inner">
+            <div class="pa-4 mud-elevation-1 rounded-lg align-self-start"
+                style="max-width: 85%; background-color: white; border-left: 4px solid var(--mud-palette-info);">
+                <MudText Typo="Typo.body2" Style="line-height: 1.5;">Greetings! I am your <b>Legal AI Assistant</b>.
+                    <br /><br />I can help you understand the implications of these rules, compare them with
+                    international standards, or explain technical jargon. <br /><br />What would you like to know?
                 </MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2 d-block">AI Assistant •
+                    @DateTime.Now.ToShortTimeString()</MudText>
             </div>
 
             @foreach (var msg in _messages)
             {
-                <div class="pa-3 mud-elevation-1 rounded @(msg.IsUser ? "mud-theme-primary align-self-end" : "mud-alert-success align-self-start")"
-                    style="max-width: 80%; @(msg.IsUser ? "color: white;" : "")">
-                    <MudText Typo="Typo.body2">@((MarkupString)msg.Text.Replace("\n", "<br/>"))</MudText>
-                    </div>
+                <div class="pa-4 mud-elevation-2 rounded-lg @(msg.IsUser ? "mud-theme-primary align-self-end" : "align-self-start")"
+                    style="max-width: 85%; @(msg.IsUser ? "color: white; border-bottom-right-radius: 2px;" : "background-color: white; border-bottom-left-radius: 2px; border-left: 4px solid var(--mud-palette-success);")">
+                    <MudText Typo="Typo.body2" Style="line-height: 1.5;">@((MarkupString)msg.Text.Replace("\n", "<br/>"))
+                    </MudText>
+                    <MudText Typo="Typo.caption"
+                        Style="@(msg.IsUser ? "color: rgba(255,255,255,0.7);" : "color: var(--mud-palette-text-secondary);")"
+                        Class="mt-2 d-block">
+                        @(msg.IsUser ? "You" : "AI Assistant") • @DateTime.Now.ToShortTimeString()
+                    </MudText>
+                </div>
             }
 
             @if (_isThinking)
             {
-                <div class="pa-3 mud-alert-success align-self-start mud-elevation-1 rounded" style="max-width: 80%;">
-                    <MudProgressLinear Color="Color.Success" Indeterminate="true" Class="mt-1" />
+                <div class="pa-4 bg-white align-self-start mud-elevation-1 rounded-lg d-flex align-center"
+                    style="max-width: 80%; border-left: 4px solid var(--mud-palette-success);">
+                    <MudProgressCircular Color="Color.Success" Size="Size.Small" Indeterminate="true" Class="mr-3" />
+                    <MudText Typo="Typo.caption">Analyzing legal context...</MudText>
                 </div>
             }
         </div>
 
-        <div class="d-flex align-center">
-            <MudTextField T="string" @bind-Value="_currentQuestion" Placeholder="Ask a question..."
+        <div class="d-flex align-center mt-2 px-1">
+            <MudTextField T="string" @bind-Value="_currentQuestion" Placeholder="Type your legal query here..."
                 OnKeyDown="@HandleKeyDown" Immediate="true" Variant="Variant.Outlined" Adornment="Adornment.End"
-                AdornmentIcon="@Icons.Material.Filled.Send" OnAdornmentClick="AskQuestion" />
+                AdornmentIcon="@Icons.Material.Filled.AutoAwesome" AdornmentColor="Color.Primary"
+                OnAdornmentClick="AskQuestion" Margin="Margin.Dense" />
+            <MudIconButton Icon="@Icons.Material.Filled.Send" Color="Color.Primary" OnClick="AskQuestion"
+                Class="ml-2" />
         </div>
     </DialogContent>
 </MudDialog>

@@ -5,18 +5,51 @@
 @inject ISnackbar Snackbar
 
 <MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@(RuleId.HasValue ? Icons.Material.Filled.Edit : Icons.Material.Filled.Add)" Class="mr-3" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h6">@(RuleId.HasValue ? "Edit Rule / Provision" : "Add New Rule")</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Enter the details for this section of the public consultation document.</MudText>
+            </div>
+        </div>
+    </TitleContent>
     <DialogContent>
         <MudForm @ref="form" @bind-IsValid="@success">
-            <MudNumericField Label="Display Order" @bind-Value="model.DisplayOrder" />
-            <MudTextField Label="Rule Number" @bind-Value="model.RuleNumber" Required="true" />
-            <MudTextField Label="Section Title" @bind-Value="model.SectionTitle" />
-            <MudTextField Label="Existing Provision" @bind-Value="model.ExistingProvision" Lines="3" />
-            <MudTextField Label="Proposed Provision" @bind-Value="model.ProposedProvision" Lines="3" Required="true" />
+            <MudGrid>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField Label="Display Order" @bind-Value="model.DisplayOrder" 
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" Min="1"
+                                     Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.FormatListNumbered" />
+                </MudItem>
+                <MudItem xs="12" sm="8">
+                    <MudTextField Label="Rule Number" @bind-Value="model.RuleNumber" Required="true" 
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="e.g., Section 1, Part A..." 
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Numbers" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Topic / Section Title" @bind-Value="model.SectionTitle" 
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Label" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Existing Provision (Current Law)" @bind-Value="model.ExistingProvision" 
+                                  Lines="3" Variant="Variant.Outlined" HelperText="Leave empty if this is a new law." />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField Label="Proposed Provision (Modified Law)" @bind-Value="model.ProposedProvision" 
+                                  Lines="4" Required="true" Variant="Variant.Outlined" 
+                                  HelperText="Explain exactly how the language should change." />
+                </MudItem>
+            </MudGrid>
         </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!success)">Save</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Color="Color.Default" Class="px-6">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" 
+                   Disabled="@(!success)" StartIcon="@Icons.Material.Filled.Save" Class="px-8">
+            @(RuleId.HasValue ? "Update Changes" : "Save Rule")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 

@@ -10,63 +10,116 @@
 @inject ISnackbar Snackbar
 
 <MudDialog>
-    <DialogContent>
-        <MudForm @ref="form" @bind-IsValid="@success">
-            <div class="d-flex flex-column align-center mb-4">
-                <MudAvatar Color="Color.Primary" Style="height:100px; width:100px; font-size:3rem;" Class="mb-2">
-                    @if (!string.IsNullOrEmpty(model.ProfilePictureUrl))
-                    {
-                        <MudImage Src="@model.ProfilePictureUrl" Style="height:100%; width:100%; object-fit:cover;" />
-                    }
-                    else
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
-                    }
-                </MudAvatar>
-                <MudFileUpload T="IBrowserFile" OnFilesChanged="UploadFiles">
-                    <ActivatorContent>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                            StartIcon="@Icons.Material.Filled.CloudUpload">
-                            Upload Photo
-                        </MudButton>
-                    </ActivatorContent>
-                </MudFileUpload>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-3" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h6">Create System User</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Register a new administrator, official, or citizen
+                    account.</MudText>
             </div>
-
-            <MudTextField T="string" Label="Username" Required="true" @bind-Value="model.Username" />
-            <MudTextField T="string" Label="Email" Required="true" InputType="InputType.Email"
-            @bind-Value="model.Email" />
-            <MudTextField T="string" Label="Password" Required="true" InputType="InputType.Password"
-            @bind-Value="password" />
-
-            <MudSelect T="Guid" Label="Role" Required="true" @bind-Value="selectedRoleId"
-                AnchorOrigin="Origin.BottomCenter">
-                @foreach (var role in Roles)
-                {
-                    <MudSelectItem Value="@role.Oid">@role.Name</MudSelectItem>
-                }
-            </MudSelect>
-
-            <MudTextField T="string" Label="Full Name (English)" @bind-Value="model.FullNameEnglish" />
-            <MudTextField T="string" Label="Full Name (Bangla)" @bind-Value="model.FullNameBangla" />
-            <MudTextField T="string" Label="Designation" @bind-Value="model.Designation" />
-            <MudTextField T="string" Label="Mobile Number" @bind-Value="model.PhoneNumber" />
-            <MudTextField T="string" Label="NID Number" @bind-Value="model.NIDNumber" />
-
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success" Class="pt-4">
             <MudGrid>
-                <MudItem xs="6">
-                    <MudTextField T="string" Label="Division" @bind-Value="model.Division" />
+                <MudItem xs="12" md="4" class="d-flex flex-column align-center justify-center">
+                    <MudAvatar Color="Color.Primary" Style="height:120px; width:120px; font-size:3.5rem;"
+                        Class="mb-4 shadow-sm">
+                        @if (!string.IsNullOrEmpty(model.ProfilePictureUrl))
+                        {
+                            <MudImage Src="@model.ProfilePictureUrl" Style="height:100%; width:100%; object-fit:cover;" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+                        }
+                    </MudAvatar>
+                    <MudFileUpload T="IBrowserFile" OnFilesChanged="UploadFiles">
+                        <ActivatorContent>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                StartIcon="@Icons.Material.Filled.CloudUpload" Size="Size.Small">
+                                Upload Photo
+                            </MudButton>
+                        </ActivatorContent>
+                    </MudFileUpload>
                 </MudItem>
-                <MudItem xs="6">
-                    <MudTextField T="string" Label="District" @bind-Value="model.District" />
+
+                <MudItem xs="12" md="8">
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Username" Required="true" @bind-Value="model.Username"
+                                Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start"
+                                AdornmentIcon="@Icons.Material.Filled.AccountCircle" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Email Address" Required="true" InputType="InputType.Email"
+                            @bind-Value="model.Email" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Password" Required="true" InputType="InputType.Password"
+                            @bind-Value="password" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="Guid" Label="Assign Role" Required="true" @bind-Value="selectedRoleId"
+                                Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter"
+                                Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Security">
+                                @foreach (var role in Roles)
+                                {
+                                    <MudSelectItem Value="@role.Oid">@role.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Full Name (English)" @bind-Value="model.FullNameEnglish"
+                        Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Full Name (Bangla)" @bind-Value="model.FullNameBangla"
+                        Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Designation / Title" @bind-Value="model.Designation"
+                        Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="Mobile Number" @bind-Value="model.PhoneNumber"
+                        Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Label="NID Number" @bind-Value="model.NIDNumber" Variant="Variant.Outlined"
+                        Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudTextField T="string" Label="Division" @bind-Value="model.Division" Variant="Variant.Outlined"
+                        Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12" sm="3">
+                    <MudTextField T="string" Label="District" @bind-Value="model.District" Variant="Variant.Outlined"
+                        Margin="Margin.Dense" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Business / Residential Address" @bind-Value="model.Address"
+                        Lines="2" Variant="Variant.Outlined" />
                 </MudItem>
             </MudGrid>
-            <MudTextField T="string" Label="Address" @bind-Value="model.Address" Lines="2" />
         </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!success)">Create</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Class="px-6">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success)"
+            StartIcon="@Icons.Material.Filled.PersonAdd" Class="px-8">
+            Create Account
+        </MudButton>
     </DialogActions>
 </MudDialog>
 

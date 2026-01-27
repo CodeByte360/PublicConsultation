@@ -18,31 +18,65 @@
     }
     else
     {
-        <MudPaper Class="pa-4 mb-4" Elevation="3">
-            <div class="d-flex justify-space-between align-center">
-                <div>
-                    <MudText Typo="Typo.h5">@_document.Title</MudText>
-                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@_document.MinistryOrDepartment</MudText>
+        <MudPaper Class="pa-6 mb-6 shadow-sm border-l-8" Elevation="4"
+            Style="border-left-color: var(--mud-palette-primary);">
+            <div class="d-flex justify-space-between align-start">
+                <div class="d-flex align-start">
+                    <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Primary" Size="Size.Large"
+                        Class="mr-4 mt-1" />
+                    <div>
+                        <MudText Typo="Typo.h5" Style="font-weight: 700;">@_document.Title</MudText>
+                        <div class="d-flex align-center mt-1">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Size="Size.Small" Color="Color.Secondary"
+                                Class="mr-2" />
+                            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@_document.MinistryOrDepartment</MudText>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <MudChip T="string" Color="@GetStatusColor(_document.Status)">@_document.Status</MudChip>
-                    @if (_document.Status == "Draft")
-                    {
-                        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="PublishDocument">Publish</MudButton>
-                    }
-                    else if (_document.Status == "Published")
-                    {
-                        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="CloseConsultation">Close</MudButton>
-                        <MudButton Variant="Variant.Filled" Color="Color.Info" Class="ml-2"
-                            Href="@($"/admin/reports/comparative/{Id}")">Comparative Statement</MudButton>
-                    }
+                <div class="d-flex flex-column align-end">
+                    <div class="d-flex align-center mb-3">
+                        <MudChip T="string" Color="@GetStatusColor(_document.Status)" Variant="Variant.Filled"
+                            Size="Size.Small" Class="mr-2">Status: @_document.Status</MudChip>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">ID: @_document.Oid.ToString().Substring(0,8)...
+                        </MudText>
+                    </div>
+                    <div class="d-flex">
+                        @if (_document.Status == "Draft")
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="PublishDocument"
+                                StartIcon="@Icons.Material.Filled.Public" Class="px-6 rounded-pill">Publish Consultation
+                            </MudButton>
+                        }
+                        else if (_document.Status == "Published")
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="CloseConsultation"
+                                StartIcon="@Icons.Material.Filled.Lock" Class="px-4 rounded-pill mr-2">Close</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Info" StartIcon="@Icons.Material.Filled.BarChart"
+                                Class="px-4 rounded-pill" Href="@($"/admin/reports/comparative/{Id}")">View Analysis</MudButton>
+                        }
+                    </div>
                 </div>
             </div>
-            <MudDivider Class="my-3" />
-            <MudText Typo="Typo.body2">@_document.Description</MudText>
-            <MudText Typo="Typo.caption" Class="mt-2 text-muted">Consultation Period:
-                @_document.ConsultationStartDate.ToShortDateString() - @_document.ConsultationEndDate.ToShortDateString()
-            </MudText>
+
+            <MudDivider Class="my-4" />
+
+            <MudGrid>
+                <MudItem xs="12" md="8">
+                    <MudText Typo="Typo.body2" Style="line-height: 1.7; color: #444;">@_document.Description</MudText>
+                </MudItem>
+                <MudItem xs="12" md="4"
+                    class="d-flex flex-column justify-center align-end border-l-2 pl-4 mud-border-lines-default">
+                    <div class="d-flex align-center mb-1">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="mr-2"
+                            Color="Color.Primary" />
+                        <MudText Typo="Typo.subtitle2"><b>Consultation Timeline</b></MudText>
+                    </div>
+                    <MudText Typo="Typo.caption" Style="font-size: 0.9rem;">
+                        @_document.ConsultationStartDate.ToString("MMM dd, yyyy") —
+                        @_document.ConsultationEndDate.ToString("MMM dd, yyyy")
+                    </MudText>
+                </MudItem>
+            </MudGrid>
         </MudPaper>
 
         <div class="d-flex justify-space-between align-center mt-6 mb-2">

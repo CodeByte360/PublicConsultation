@@ -41,31 +41,63 @@
     <MudGrid Class="mb-6">
         <MudItem xs="12" md="4">
             <MudAlert Severity="@GetAggregateSeverity()" Variant="Variant.Filled"
-                ContentAlignment="HorizontalAlignment.Center" Class="py-6">
-                <MudText Typo="Typo.h6">Overall Sentiment: @GetAggregateSentiment()</MudText>
+                ContentAlignment="HorizontalAlignment.Center"
+                Class="py-6 d-flex flex-column align-center justify-center" Style="height: 100%;">
+                <MudText Typo="Typo.h6">Overall Sentiment</MudText>
+                <MudText Typo="Typo.h4"><b>@GetAggregateSentiment()</b></MudText>
             </MudAlert>
         </MudItem>
         <MudItem xs="12" md="8">
-            <MudPaper Class="pa-4 d-flex align-center justify-space-around" Style="height: 100%;">
-                <div class="text-center">
-                    <MudText Typo="Typo.h5" Color="Color.Success"><b>@_filteredOpinions.Count(o => (o.Sentiment ??
-                            "").StartsWith("Positive"))</b></MudText>
-                    <MudText Typo="Typo.caption">Positive</MudText>
+            <MudPaper Class="pa-4 d-flex align-center justify-space-between" Style="height: 100%;">
+                <div style="width: 280px;" class="d-flex justify-center">
+                    <MudChart ChartType="ChartType.Donut" Width="200px" Height="200px" InputData="@GetChartData()"
+                        InputLabels="@_chartLabels" ChartOptions="@_chartOptions">
+                        <CustomGraphics>
+                            <text class="donut-inner-text" x="50%" y="45%" dominant-baseline="middle"
+                                text-anchor="middle" fill="black" font-family="Helvetica" font-size="2">Total</text>
+                            <text class="donut-inner-text" x="50%" y="58%" dominant-baseline="middle"
+                                text-anchor="middle" fill="black" font-family="Helvetica"
+                                font-size="5">@_filteredOpinions.Count()</text>
+                        </CustomGraphics>
+                    </MudChart>
                 </div>
-                <div class="text-center">
-                    <MudText Typo="Typo.h5" Color="Color.Error"><b>@_filteredOpinions.Count(o => (o.Sentiment ??
-                            "").StartsWith("Negative"))</b></MudText>
-                    <MudText Typo="Typo.caption">Negative</MudText>
-                </div>
-                <div class="text-center">
-                    <MudText Typo="Typo.h5" Color="Color.Warning"><b>@_filteredOpinions.Count(o => (o.Sentiment ??
-                            "").StartsWith("Mixed"))</b></MudText>
-                    <MudText Typo="Typo.caption">Mixed</MudText>
-                </div>
-                <div class="text-center">
-                    <MudText Typo="Typo.h5"><b>@_filteredOpinions.Count(o => string.IsNullOrEmpty(o.Sentiment) ||
-                            o.Sentiment.StartsWith("Neutral"))</b></MudText>
-                    <MudText Typo="Typo.caption">Neutral</MudText>
+                <div class="d-flex flex-column justify-center flex-grow-1 ml-6 mr-4">
+                    <div class="d-flex align-center justify-space-between mb-2">
+                        <div class="d-flex align-center">
+                            <div
+                                style="width:12px; height:12px; background:#00c853; border-radius:50%; margin-right:8px;">
+                            </div>
+                            <MudText>Positive</MudText>
+                        </div>
+                        <MudText Typo="Typo.h6"><b>@CountSentiment("Positive")</b></MudText>
+                    </div>
+                    <div class="d-flex align-center justify-space-between mb-2">
+                        <div class="d-flex align-center">
+                            <div
+                                style="width:12px; height:12px; background:#f44336; border-radius:50%; margin-right:8px;">
+                            </div>
+                            <MudText>Negative</MudText>
+                        </div>
+                        <MudText Typo="Typo.h6"><b>@CountSentiment("Negative")</b></MudText>
+                    </div>
+                    <div class="d-flex align-center justify-space-between mb-2">
+                        <div class="d-flex align-center">
+                            <div
+                                style="width:12px; height:12px; background:#ff9800; border-radius:50%; margin-right:8px;">
+                            </div>
+                            <MudText>Mixed</MudText>
+                        </div>
+                        <MudText Typo="Typo.h6"><b>@CountSentiment("Mixed")</b></MudText>
+                    </div>
+                    <div class="d-flex align-center justify-space-between">
+                        <div class="d-flex align-center">
+                            <div
+                                style="width:12px; height:12px; background:#e0e0e0; border-radius:50%; margin-right:8px;">
+                            </div>
+                            <MudText>Neutral</MudText>
+                        </div>
+                        <MudText Typo="Typo.h6"><b>@CountSentiment("Neutral")</b></MudText>
+                    </div>
                 </div>
             </MudPaper>
         </MudItem>
@@ -211,6 +243,30 @@
         "Mixed Feedback" => Severity.Warning,
         _ => Severity.Normal
     };
+
+    private string[] _chartLabels = { "Positive", "Negative", "Mixed", "Neutral" };
+    private ChartOptions _chartOptions = new ChartOptions
+        {
+            ChartPalette = new[] { "#00c853", "#f44336", "#ff9800", "#bdbdbd" }
+        };
+
+    private double[] GetChartData()
+    {
+        return new double[] {
+CountSentiment("Positive"),
+CountSentiment("Negative"),
+CountSentiment("Mixed"),
+CountSentiment("Neutral")
+};
+    }
+
+    private int CountSentiment(string type)
+    {
+        if (type == "Neutral")
+            return _filteredOpinions.Count(o => string.IsNullOrEmpty(o.Sentiment) || o.Sentiment.StartsWith("Neutral"));
+
+        return _filteredOpinions.Count(o => (o.Sentiment ?? "").StartsWith(type));
+    }
 
     private bool _isAnalyzing = false;
     [Inject] ISnackbar Snackbar { get; set; } = null!;

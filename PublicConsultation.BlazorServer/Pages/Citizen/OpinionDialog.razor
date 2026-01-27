@@ -11,29 +11,62 @@
 @inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 
 <MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.RateReview" Class="mr-3" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h6">Submit Public Feedback</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Your feedback helps shape the legislative process
+                    for <b>Rule @RuleNumber</b>.</MudText>
+            </div>
+        </div>
+    </TitleContent>
     <DialogContent>
-        <MudText Typo="Typo.body1" Class="mb-4">You are submitting an opinion for <b>Rule @RuleNumber</b>.</MudText>
         <MudForm @ref="form" @bind-IsValid="@success">
-            <MudTextField Label="Your Opinion / Feedback" Value="model.OpinionText"
-                ValueChanged="@((string val) => OnTextChanged(val))" Lines="4" Required="true"
-                RequiredError="Opinion is required." Immediate="true" />
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField Label="Detailed Opinion / Feedback" Value="model.OpinionText"
+                        ValueChanged="@((string val) => OnTextChanged(val))" Lines="6" Required="true"
+                        RequiredError="Opinion is required." Immediate="true" Variant="Variant.Outlined"
+                        Placeholder="Tell us what you think about this provision..."
+                        HelperText="Minimum 10 characters required for quality analysis." />
+                </MudItem>
 
-            @if (_isDuplicateDetected)
-            {
-                <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Class="mt-2"
-                    Icon="@Icons.Material.Filled.Warning">
-                    Note: A similar opinion has already been submitted for this rule. You can still submit if your point is
-                    unique.
-                </MudAlert>
-            }
+                @if (_isCheckingDuplicate)
+                {
+                    <MudItem xs="12" class="py-0">
+                        <div class="d-flex align-center">
+                            <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true"
+                                Class="mr-2" />
+                            <MudText Typo="Typo.caption">Checking for similar feedback...</MudText>
+                        </div>
+                    </MudItem>
+                }
 
-            <MudTextField @bind-Value="model.Suggestion" Label="Suggested Alternative (Optional)" Lines="3"
-                Class="mt-4" />
+                @if (_isDuplicateDetected)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true"
+                            Icon="@Icons.Material.Filled.Info" BorderClass="border-l-4">
+                            Note: A similar opinion has already been submitted. Please Ensure your feedback provides unique
+                            value.
+                        </MudAlert>
+                    </MudItem>
+                }
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="model.Suggestion" Label="Proposed Rewording / Improvement (Optional)"
+                        Lines="3" Variant="Variant.Outlined"
+                        Placeholder="Example: 'Instead of X, we should say Y because...'" />
+                </MudItem>
+            </MudGrid>
         </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!success || _isCheckingDuplicate)">Submit
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Class="px-6">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit"
+            Disabled="@(!success || _isCheckingDuplicate)" StartIcon="@Icons.Material.Filled.Send" Class="px-8">
+            Submit Feedback
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -128,19 +161,19 @@
 
                 // Log activity
                 var httpContext = HttpContextAccessor.HttpContext;
-                string ipAddress = httpContext?.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? 
-                                  httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
-                
+                string ipAddress = httpContext?.Request.Headers["X-Forwarded-For"].FirstOrDefault() ??
+                httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
+
                 // Map IPv6 loopback to IPv4 for better readability
                 if (ipAddress == "::1") ipAddress = "127.0.0.1";
 
                 var user = await DbContext.UserAccounts.FindAsync(UserId);
                 await AuditLogService.LogActivityAsync(
-                    "Opinion Submitted",
-                    $"User {user?.FullNameEnglish ?? "Anonymous"} submitted an opinion for Rule {RuleNumber}",
-                    user?.Email ?? "Anonymous",
-                    ipAddress,
-                    null);
+                "Opinion Submitted",
+                $"User {user?.FullNameEnglish ?? "Anonymous"} submitted an opinion for Rule {RuleNumber}",
+                user?.Email ?? "Anonymous",
+                ipAddress,
+                null);
 
                 MudDialog.Close(DialogResult.Ok(true));
             }

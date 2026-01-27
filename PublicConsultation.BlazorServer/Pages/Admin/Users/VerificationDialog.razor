@@ -2,35 +2,58 @@
 @using PublicConsultation.Core.Interfaces
 
 <MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@(User.IsVerified ? Icons.Material.Filled.GppBad : Icons.Material.Filled.VerifiedUser)" 
+                     Class="mr-3" Color="@(User.IsVerified ? Color.Error : Color.Success)" />
+            <div>
+                <MudText Typo="Typo.h6">@(User.IsVerified ? "Revoke Verification" : "Verify Citizen Identity")</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Ensure the details below match the provided legal identification (NID/Passport).</MudText>
+            </div>
+        </div>
+    </TitleContent>
     <DialogContent>
-        <MudText Typo="Typo.h6" GutterBottom="true">Is this the correct citizen?</MudText>
-        <MudText Class="mb-4">Please verify the details below match the citizen's documents.</MudText>
+        <div class="pt-4">
+            <MudAlert Severity="@(User.IsVerified ? Severity.Warning : Severity.Info)" Variant="Variant.Outlined" 
+                      Class="mb-4" Dense="true">
+                @(User.IsVerified 
+                    ? "Warning: You are about to revoke this citizen's verified status." 
+                    : "Please review the information carefully before granting verified status.")
+            </MudAlert>
 
-        <MudGrid>
-            <MudItem xs="12" sm="6">
-                <MudField Label="Full Name (English)" Variant="Variant.Outlined">@User.FullNameEnglish</MudField>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudField Label="Full Name (Bangla)" Variant="Variant.Outlined">@User.FullNameBangla</MudField>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudField Label="NID Number" Variant="Variant.Outlined">@User.NIDNumber</MudField>
-            </MudItem>
-            <MudItem xs="12" sm="6">
-                <MudField Label="Mobile Number" Variant="Variant.Outlined">@User.PhoneNumber</MudField>
-            </MudItem>
-            <MudItem xs="12">
-                <MudField Label="Email" Variant="Variant.Outlined">@User.Email</MudField>
-            </MudItem>
-            <MudItem xs="12">
-                <MudField Label="Address" Variant="Variant.Outlined">@User.Address</MudField>
-            </MudItem>
-        </MudGrid>
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudField Label="Full Name (English)" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person">@User.FullNameEnglish</MudField>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudField Label="Full Name (Bangla)" Variant="Variant.Outlined" Margin="Margin.Dense">@User.FullNameBangla</MudField>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudField Label="NID Number" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Fingerprint">@User.NIDNumber</MudField>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudField Label="Mobile Number" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Phone">@User.PhoneNumber</MudField>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudField Label="Email Address" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email">@User.Email</MudField>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudField Label="Residential Address" Variant="Variant.Outlined" Margin="Margin.Dense" 
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Home">@User.Address</MudField>
+                </MudItem>
+            </MudGrid>
+        </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="@(User.IsVerified ? Color.Error : Color.Success)" Variant="Variant.Filled" OnClick="Submit">
-            @(User.IsVerified ? "Confirm Unverify" : "Confirm Verify")
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Class="px-6">Cancel</MudButton>
+        <MudButton Color="@(User.IsVerified ? Color.Error : Color.Success)" 
+                   Variant="Variant.Filled" OnClick="Submit" Class="px-8"
+                   StartIcon="@(User.IsVerified ? Icons.Material.Filled.RemoveModerator : Icons.Material.Filled.CheckCircle)">
+            @(User.IsVerified ? "Revoke Verification" : "Confirm Verification")
         </MudButton>
     </DialogActions>
 </MudDialog>

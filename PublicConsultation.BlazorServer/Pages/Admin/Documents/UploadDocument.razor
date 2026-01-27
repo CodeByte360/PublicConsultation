@@ -10,38 +10,83 @@
 @inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
-    <MudPaper Class="pa-4">
-        <MudText Typo="Typo.h5" GutterBottom="true">Upload Draft Document</MudText>
+    <MudPaper Class="pa-8 pb-10 shadow-lg" Elevation="4">
+        <div class="d-flex align-center mb-6">
+            <MudIcon Icon="@Icons.Material.Filled.FileUpload" Color="Color.Primary" Size="Size.Large" Class="mr-3" />
+            <div>
+                <MudText Typo="Typo.h5" Style="font-weight: 700;">Initiate Public Consultation</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Upload a new draft document to begin the public review and amendment process.</MudText>
+            </div>
+        </div>
+
+        <MudDivider Class="mb-8" />
+
         <MudForm @ref="form" @bind-IsValid="@success">
-            <MudTextField T="string" Label="Document Title" Required="true" @bind-Value="model.Title" />
-            <MudSelect T="Guid?" Label="Ministry / Department" Required="true" @bind-Value="model.MinistryId"
-                AnchorOrigin="Origin.BottomCenter">
-                @foreach (var ministry in Ministries)
-                {
-                    <MudSelectItem Value="@((Guid?)ministry.Oid)">@ministry.Name</MudSelectItem>
-                }
-            </MudSelect>
-            <MudTextField T="string" Label="Description" Lines="3" @bind-Value="model.Description" />
+            <MudGrid Spacing="4">
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Document Title / Legislative Act Name" Required="true" 
+                                  @bind-Value="model.Title" Variant="Variant.Outlined" 
+                                  Placeholder="e.g. Cyber Security Act, 2026 (Draft)"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Title" />
+                </MudItem>
 
-            <MudDateRangePicker Label="Consultation Period" @bind-DateRange="_dateRange" Required="true"
-                PickerVariant="PickerVariant.Dialog" HelperText="Select the start and end date for public feedback" />
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Label="Originating Ministry" Required="true" @bind-Value="model.MinistryId"
+                               Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter"
+                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AccountBalance">
+                        @foreach (var ministry in Ministries)
+                        {
+                            <MudSelectItem Value="@((Guid?)ministry.Oid)">@ministry.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
 
-            <MudFileUpload T="IBrowserFile" OnFilesChanged="UploadFile" Class="mt-4">
-                <ActivatorContent>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                        StartIcon="@Icons.Material.Filled.CloudUpload">
-                        Select File (PDF/DOCX)
+                <MudItem xs="12" sm="6">
+                    <MudDateRangePicker Label="Consultation Timeline" @bind-DateRange="_dateRange" Required="true"
+                                        Variant="Variant.Outlined" PickerVariant="PickerVariant.Dialog" 
+                                        Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.DateRange"
+                                        HelperText="Select start and end dates for submissions." />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField T="string" Label="Description & Objectives" Lines="4" @bind-Value="model.Description" 
+                                  Variant="Variant.Outlined" Placeholder="Briefly explain the purpose of this consultation..."
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Notes" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudPaper Class="pa-6 d-flex flex-column align-center border-dashed border-2 mud-border-primary" 
+                              Elevation="0" Style="background-color: #f8f9fa;">
+                        <MudIcon Icon="@Icons.Material.Filled.PictureAsPdf" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
+                        <MudText Typography="Typo.subtitle1" Class="mb-1"><b>Document Attachment</b></MudText>
+                        <MudText Typography="Typo.caption" Class="mb-4 text-center">Supported formats: PDF, DOCX (Max 10MB). <br/> Our AI will automatically parse rules and sections from the file.</MudText>
+                        
+                        <MudFileUpload T="IBrowserFile" OnFilesChanged="UploadFile">
+                            <ActivatorContent>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.CloudUpload" Class="px-8 rounded-pill">
+                                    @( _file == null ? "Select Document" : "Change Document")
+                                </MudButton>
+                            </ActivatorContent>
+                        </MudFileUpload>
+
+                        @if (_file != null)
+                        {
+                            <MudAlert Severity="Severity.Success" Variant="Variant.Text" Class="mt-4 py-1" Dense="true" Icon="@Icons.Material.Filled.CheckCircle">
+                                Ready: @_file.Name (@((_file.Size / 1024).ToString("N0")) KB)
+                            </MudAlert>
+                        }
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" class="d-flex justify-end mt-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="Submit" 
+                               Size="Size.Large" Class="px-12 rounded-pill shadow-lg"
+                               StartIcon="@Icons.Material.Filled.Send" Style="min-width: 250px;">
+                        Upload & Parse Rules
                     </MudButton>
-                </ActivatorContent>
-            </MudFileUpload>
-            @if (_file != null)
-            {
-                <MudText Typo="Typo.body2" Class="mt-2">Selected: @_file.Name</MudText>
-            }
-
-            <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="Submit" Class="mt-6">
-                Upload & Create
-            </MudButton>
+                </MudItem>
+            </MudGrid>
         </MudForm>
     </MudPaper>
 </MudContainer>

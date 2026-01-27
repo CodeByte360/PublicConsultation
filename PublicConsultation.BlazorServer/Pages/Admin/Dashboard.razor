@@ -174,7 +174,7 @@
         bool needsSave = false;
         foreach (var op in allOpinions)
         {
-            if (string.IsNullOrEmpty(op.Sentiment) || op.Sentiment == "Neutral")
+            if (string.IsNullOrEmpty(op.Sentiment) || op.Sentiment.StartsWith("Neutral"))
             {
                 op.Sentiment = await AiService.AnalyzeSentimentAsync(op.OpinionText);
                 needsSave = true;
@@ -185,10 +185,10 @@
             await DbContext.SaveChangesAsync();
         }
 
-        _sentimentData[0] = allOpinions.Count(o => o.Sentiment == "Positive");
-        _sentimentData[1] = allOpinions.Count(o => o.Sentiment == "Negative");
-        _sentimentData[2] = allOpinions.Count(o => o.Sentiment == "Mixed");
-        _sentimentData[3] = allOpinions.Count(o => o.Sentiment == "Neutral");
+        _sentimentData[0] = allOpinions.Count(o => (o.Sentiment ?? "").StartsWith("Positive"));
+        _sentimentData[1] = allOpinions.Count(o => (o.Sentiment ?? "").StartsWith("Negative"));
+        _sentimentData[2] = allOpinions.Count(o => (o.Sentiment ?? "").StartsWith("Mixed"));
+        _sentimentData[3] = allOpinions.Count(o => string.IsNullOrEmpty(o.Sentiment) || o.Sentiment.StartsWith("Neutral"));
 
         // Calculate Controversial Sections
         _controversialSections = await DbContext.Opinions
@@ -201,7 +201,7 @@
                 SectionTitle = g.First().Rule.SectionTitle,
                 DocTitle = g.First().Rule.DraftDocument.Title,
                 TotalFeedback = g.Count(),
-                NegativeCount = g.Count(o => o.Sentiment == "Negative")
+                NegativeCount = g.Count(o => (o.Sentiment ?? "").StartsWith("Negative"))
             })
         .OrderByDescending(s => s.NegativeCount)
         .Take(5)

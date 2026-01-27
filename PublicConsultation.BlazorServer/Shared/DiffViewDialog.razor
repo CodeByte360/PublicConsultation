@@ -1,34 +1,55 @@
 @using System.Text.RegularExpressions
 
 <MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Compare" Class="mr-3" Color="Color.Info" />
+            <div>
+                <MudText Typo="Typo.h6">Compare Legislative Provisions</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Review modifications between existing law and the
+                    current proposal.</MudText>
+            </div>
+        </div>
+    </TitleContent>
     <DialogContent>
         <MudGrid>
             <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Existing Provision</MudText>
-                <MudPaper Class="pa-4 mud-background-gray" Elevation="0" Style="height: 300px; overflow-y: auto;">
-                    <MudText Typo="Typo.body2">@OldText</MudText>
+                <div class="d-flex align-center mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" Class="mr-2"
+                        Color="Color.Default" />
+                    <MudText Typo="Typo.subtitle2">Existing Provision</MudText>
+                </div>
+                <MudPaper Class="pa-5 mud-background-gray border-solid border-2" Elevation="0"
+                    Style="height: 350px; overflow-y: auto; line-height: 1.6; border-color: var(--mud-palette-lines-default);">
+                    <MudText Typo="Typo.body2" Style="color: var(--mud-palette-text-secondary);">@OldText</MudText>
                 </MudPaper>
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Proposed Provision (Changes Highlighted)</MudText>
-                <MudPaper Class="pa-4" Elevation="0"
-                    Style="height: 300px; overflow-y: auto; background-color: #f0fff4;">
-                    <div class="diff-container">
+                <div class="d-flex align-center mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Upcoming" Size="Size.Small" Class="mr-2"
+                        Color="Color.Success" />
+                    <MudText Typo="Typo.subtitle2">Proposed Provision (Highlighed)</MudText>
+                </div>
+                <MudPaper Class="pa-5 border-solid border-2" Elevation="0"
+                    Style="height: 350px; overflow-y: auto; line-height: 1.6; background-color: #f6fff8; border-color: #c6f6d5;">
+                    <div class="diff-container mud-typography-body2">
                         @((MarkupString)GenerateDiffHtml())
                     </div>
                 </MudPaper>
             </MudItem>
         </MudGrid>
-        <div class="mt-4">
-            <MudAlert Severity="Severity.Info" Dense="true">
-                <span
-                    style="background-color: #ccffcc; margin-right: 8px; padding: 2px 4px; border-radius: 4px;">Green</span>
-                highlights represent keywords in the new proposal.
+        <div class="mt-6">
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true"
+                Icon="@Icons.Material.Filled.Lightbulb">
+                <div class="d-flex align-center">
+                    <span class="diff-added px-2 mr-2">Highlighted Words</span>
+                    <span>indicate new additions or key changes in the proposed text.</span>
+                </div>
             </MudAlert>
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Primary" OnClick="Close">Close</MudButton>
+        <MudButton Color="Color.Info" Variant="Variant.Text" OnClick="Close" Class="px-8">Close Comparison</MudButton>
     </DialogActions>
 </MudDialog>
 
