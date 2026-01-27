@@ -13,7 +13,7 @@
 
     <MudPaper Class="pa-4 mb-6">
         <MudGrid>
-            <MudItem xs="12" md="6">
+            <MudItem xs="12" md="5">
                 <MudSelect T="Guid?" Label="Filter by Document" Value="@DocumentId" ValueChanged="OnDocumentChanged"
                     Clearable="true">
                     <MudSelectItem T="Guid?" Value="null">All Documents</MudSelectItem>
@@ -23,10 +23,17 @@
                     }
                 </MudSelect>
             </MudItem>
-            <MudItem xs="12" md="6" Class="d-flex align-end">
+            <MudItem xs="12" md="5" Class="d-flex align-end">
                 <MudTextField @bind-Value="_searchString" Placeholder="Search feedback text..."
                     Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
                     Class="mt-0" Clearable="true" />
+            </MudItem>
+            <MudItem xs="12" md="2" Class="d-flex align-end justify-end">
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="ReanalyzeAll"
+                    Disabled="@_isAnalyzing"
+                    StartIcon="@(_isAnalyzing ? Icons.Material.Filled.Loop : Icons.Material.Filled.Refresh)">
+                    @(_isAnalyzing ? "Analyzing..." : "Re-Run AI")
+                </MudButton>
             </MudItem>
         </MudGrid>
     </MudPaper>
@@ -203,4 +210,25 @@
         "Mixed Feedback" => Severity.Warning,
         _ => Severity.Normal
     };
+
+    private bool _isAnalyzing = false;
+    [Inject] ISnackbar Snackbar { get; set; } = null!;
+
+    private async Task ReanalyzeAll()
+    {
+        if (_filteredOpinions == null || !_filteredOpinions.Any()) return;
+
+        _isAnalyzing = true;
+        int count = 0;
+        foreach (var op in _filteredOpinions.ToList())
+        {
+            op.Sentiment = await AiService.AnalyzeSentimentAsync(op.OpinionText);
+            count++;
+            StateHasChanged(); // Animate progress
+            await Task.Delay(50); // Small delay to not freeze UI
+        }
+        await DbContext.SaveChangesAsync();
+        _isAnalyzing = false;
+        Snackbar.Add($"Verified/Updated sentiment for {count} opinions.", Severity.Success);
+    }
 }

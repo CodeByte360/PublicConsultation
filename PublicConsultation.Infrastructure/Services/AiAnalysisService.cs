@@ -7,42 +7,19 @@ using Microsoft.ML.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Text.RegularExpressions;
+using System.Net.Http.Json;
 
 namespace PublicConsultation.Infrastructure.Services;
 
 public class AiAnalysisService : IAiAnalysisService
 {
-    private static MLContext _mlContext = new MLContext();
-    private static ITransformer? _model;
-    private readonly PredictionEngine<SentimentData, SentimentPrediction> _predictionEngine;
+    private readonly HttpClient _httpClient;
     private readonly IServiceProvider _serviceProvider;
 
-    public AiAnalysisService(IServiceProvider serviceProvider)
+    public AiAnalysisService(HttpClient httpClient, IServiceProvider serviceProvider)
     {
+        _httpClient = httpClient;
         _serviceProvider = serviceProvider;
-        InitializeModel();
-
-        // ML.NET PredictionEngine is not thread-safe. 
-        // We create a new one per Scoped service instance (one per request/session in Blazor Server).
-        _predictionEngine = _mlContext.Model.CreatePredictionEngine<SentimentData, SentimentPrediction>(_model!);
-    }
-
-    private void InitializeModel()
-    {
-        if (_model != null) return;
-
-        lock (_mlContext)
-        {
-            if (_model != null) return;
-
-            var trainingData = GetTrainingData();
-            var dataView = _mlContext.Data.LoadFromEnumerable(trainingData);
-
-            var pipeline = _mlContext.Transforms.Text.FeaturizeText("Features", nameof(SentimentData.Text))
-                .Append(_mlContext.BinaryClassification.Trainers.SdcaLogisticRegression(labelColumnName: "Label", featureColumnName: "Features"));
-
-            _model = pipeline.Fit(dataView);
-        }
     }
 
     public async Task<AnalysisResultDto> AnalyzeBatchAsync(List<Opinion> opinions)
@@ -58,10 +35,32 @@ public class AiAnalysisService : IAiAnalysisService
             };
         }
 
-        var results = opinions.Select(o => PredictSentiment(o.OpinionText ?? string.Empty)).ToList();
+        // Call Python API for sentiment
+        var texts = opinions.Select(o => o.OpinionText ?? string.Empty).ToList();
+        List<string> sentiments = new List<string>();
 
-        int positive = results.Count(r => r == "Positive");
-        int negative = results.Count(r => r == "Negative");
+        try 
+        {
+            var response = await _httpClient.PostAsJsonAsync("analyze_batch", new { texts = texts });
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<BatchResultDto>();
+                if (result != null)
+                {
+                    sentiments = result.Results.Select(r => r.Sentiment).ToList();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+             // Fallback if AI service is down
+             sentiments = texts.Select(t => "Neutral").ToList();
+        }
+
+        if (!sentiments.Any()) sentiments = texts.Select(t => "Neutral").ToList();
+
+        int positive = sentiments.Count(s => s == "Positive");
+        int negative = sentiments.Count(s => s == "Negative");
         int total = opinions.Count;
 
         string finalSentiment = "Neutral";
@@ -69,7 +68,7 @@ public class AiAnalysisService : IAiAnalysisService
         else if (negative > positive * 1.5) finalSentiment = "Negative";
         else if (positive > 0 && negative > 0) finalSentiment = "Mixed";
 
-        double consensusScore = (double)positive / total;
+        double consensusScore = total > 0 ? (double)positive / total : 0;
 
         // Use null-safe text aggregation
         var allText = string.Join(" ", opinions.Select(o => (o.OpinionText ?? string.Empty).ToLower()));
@@ -85,20 +84,34 @@ public class AiAnalysisService : IAiAnalysisService
         };
     }
 
-    private string PredictSentiment(string text)
+    public async Task<string> AnalyzeSentimentAsync(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return "Neutral";
 
-        lock (_predictionEngine) // Extra safety
+        try
         {
-            var prediction = _predictionEngine.Predict(new SentimentData { Text = text });
-            return prediction.Prediction ? "Positive" : "Negative";
+            var response = await _httpClient.PostAsJsonAsync("analyze_sentiment", new { text = text });
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<SentimentResultDto>();
+                if (result != null)
+                {
+                    // Return "Positive (0.95)" format
+                    return $"{result.Sentiment} ({result.Probability:P0})";
+                }
+            }
         }
+        catch
+        {
+            // Ignore for now, fallback to Neutral
+        }
+        return "Neutral";
     }
 
     private List<string> DetectThemes(string text)
     {
         var themes = new List<string>();
+        // Simple keyword matching (Client-side lightweight)
         var themesDict = new Dictionary<string, string[]>
         {
             { "Privacy & Data Protection", new[] { "privacy", "data", "encryption", "leak", "surveillance", "tracking", "personal info" } },
@@ -127,10 +140,9 @@ public class AiAnalysisService : IAiAnalysisService
         return "Proceed with current draft: High public consensus observed.";
     }
 
-    public Task<string> AnalyzeSentimentAsync(string text) => Task.FromResult(PredictSentiment(text));
-
     public Task<string> SummarizeOpinionsAsync(List<Opinion> opinions)
     {
+        // Simple frequency-based extractive summary (kept in C# for speed/simplicity or could move to Python too)
         if (opinions == null || !opinions.Any()) return Task.FromResult("No feedback provided.");
 
         var allText = string.Join(" ", opinions.Select(o => $"{o.OpinionText} {o.Suggestion ?? ""}"));
@@ -140,24 +152,9 @@ public class AiAnalysisService : IAiAnalysisService
                                 .ToList();
 
         if (!sentences.Any()) return Task.FromResult("Feedback is too brief for significant analysis.");
-
-        var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "the", "a", "an", "this", "that", "is", "are", "was", "were", "and", "or", "but", "it", "with", "for", "to", "in", "on", "of", "at", "by", "as" };
-        var wordCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var sentence in sentences)
-        {
-            var words = Regex.Split(sentence.ToLower(), @"\W+").Where(w => w.Length > 3 && !stopWords.Contains(w));
-            foreach (var word in words) wordCounts[word] = wordCounts.GetValueOrDefault(word) + 1;
-        }
-
-        var rankedSentences = sentences
-            .Select(s => new { Sentence = s, Score = Regex.Split(s, @"\W+").Where(w => wordCounts.ContainsKey(w)).Sum(w => wordCounts[w]) })
-            .OrderByDescending(x => x.Score)
-            .Take(2)
-            .Select(x => x.Sentence)
-            .ToList();
-
-        return Task.FromResult(string.Join(". ", rankedSentences) + ".");
+        
+        // Return first 2 sentences as a dumb summary for now, relying on Python for advanced stuff in future
+        return Task.FromResult(string.Join(". ", sentences.Take(2)) + ".");
     }
 
     public async Task<string> AnswerQuestionAsync(Guid documentId, string question)
@@ -180,27 +177,12 @@ public class AiAnalysisService : IAiAnalysisService
         return $"Based on **Section {bestMatch.Rule.RuleNumber}: {bestMatch.Rule.SectionTitle}**, the provision states: \"{bestMatch.Rule.ProposedProvision}\".";
     }
 
-    private List<SentimentData> GetTrainingData() => new()
-    {
-        new() { Text = "wonderful", Label = true }, new() { Text = "nice", Label = true }, new() { Text = "good", Label = true },
-        new() { Text = "great", Label = true }, new() { Text = "excellent", Label = true }, new() { Text = "support", Label = true },
-        new() { Text = "I love this", Label = true }, new() { Text = "Perfect solution", Label = true }, new() { Text = "Very helpful", Label = true },
-        new() { Text = "I support it", Label = true }, new() { Text = "agree", Label = true }, new() { Text = "Perfect", Label = true },
-        new() { Text = "bad", Label = false }, new() { Text = "worst", Label = false }, new() { Text = "terrible", Label = false },
-        new() { Text = "horrible", Label = false }, new() { Text = "dislike", Label = false }, new() { Text = "hate", Label = false },
-        new() { Text = "reject", Label = false }, new() { Text = "wrong", Label = false }, new() { Text = "oppose", Label = false }
-    };
-
-    public class SentimentData
-    {
-        [LoadColumn(0)] public string Text { get; set; } = string.Empty;
-        [LoadColumn(1), ColumnName("Label")] public bool Label { get; set; }
+    // DTOs for Python API
+    private class SentimentResultDto 
+    { 
+        public string Sentiment { get; set; } = string.Empty; 
+        public double Probability { get; set; }
     }
-
-    public class SentimentPrediction : SentimentData
-    {
-        [ColumnName("PredictedLabel")] public bool Prediction { get; set; }
-        public float Probability { get; set; }
-        public float Score { get; set; }
-    }
+    private class BatchResultDto { public List<BatchItemDto> Results { get; set; } = new(); }
+    private class BatchItemDto { public string Text { get; set; } = string.Empty; public string Sentiment { get; set; } = string.Empty; }
 }

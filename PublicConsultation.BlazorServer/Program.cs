@@ -39,7 +39,12 @@ builder.Services.AddMudServices();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAuthService, PublicConsultation.Infrastructure.Services.AuthService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IDocumentService, PublicConsultation.Infrastructure.Services.DocumentService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IEmailService, PublicConsultation.Infrastructure.Services.EmailService>();
-builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAiAnalysisService, PublicConsultation.Infrastructure.Services.AiAnalysisService>();
+// Configure HttpClient for Python AI Service
+var aiServiceUrl = builder.Configuration.GetValue<string>("AiServiceUrl") ?? "http://localhost:5000/";
+builder.Services.AddHttpClient<PublicConsultation.Core.Interfaces.IAiAnalysisService, PublicConsultation.Infrastructure.Services.AiAnalysisService>(client =>
+{
+    client.BaseAddress = new Uri(aiServiceUrl);
+});
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IDuplicateDetectionService, PublicConsultation.Infrastructure.Services.DuplicateDetectionService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAuditLogService, PublicConsultation.Infrastructure.Services.AuditLogService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IMinistryService, PublicConsultation.Infrastructure.Services.MinistryService>();
