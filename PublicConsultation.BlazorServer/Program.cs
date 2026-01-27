@@ -44,6 +44,7 @@ builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IDuplicateDetectio
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAuditLogService, PublicConsultation.Infrastructure.Services.AuditLogService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IMinistryService, PublicConsultation.Infrastructure.Services.MinistryService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IFileService, PublicConsultation.Infrastructure.Services.FileService>();
+builder.Services.AddHostedService<PublicConsultation.Infrastructure.Services.ConsultationStatusHostedService>();
 builder.Services.AddControllers();
 
 var app = builder.Build();

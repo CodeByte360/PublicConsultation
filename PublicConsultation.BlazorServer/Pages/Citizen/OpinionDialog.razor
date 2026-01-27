@@ -1,3 +1,4 @@
+@using Microsoft.EntityFrameworkCore
 @using PublicConsultation.Core.Entities
 @using PublicConsultation.Infrastructure.Data
 @using PublicConsultation.Core.Interfaces
@@ -5,6 +6,7 @@
 @inject ApplicationDbContext DbContext
 @inject IDuplicateDetectionService DuplicateService
 @inject IAuditLogService AuditLogService
+@inject ISnackbar Snackbar
 @inject IAiAnalysisService AiService
 
 <MudDialog>
@@ -99,6 +101,20 @@
         {
             try
             {
+                var rule = await DbContext.Rules.Include(r => r.DraftDocument).FirstOrDefaultAsync(r => r.Oid == RuleId);
+                if (rule?.DraftDocument == null)
+                {
+                    Snackbar.Add("Error loading rule context.", Severity.Error);
+                    return;
+                }
+
+                if (rule.DraftDocument.ConsultationEndDate < DateTime.Now)
+                {
+                    Snackbar.Add("This consultation has ended. Submissions are no longer accepted.", Severity.Error);
+                    MudDialog.Cancel();
+                    return;
+                }
+
                 model.RuleId = RuleId;
                 model.UserId = UserId;
                 model.CreatedDate = DateTime.UtcNow;

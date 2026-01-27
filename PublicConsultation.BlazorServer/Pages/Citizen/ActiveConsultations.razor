@@ -17,61 +17,61 @@
 
     @if (_loading)
     {
-        <div class="d-flex flex-column align-center py-16">
-            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-            <MudText Class="mt-4">Loading consultations...</MudText>
-        </div>
+            <div class="d-flex flex-column align-center py-16">
+                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                <MudText Class="mt-4">Loading consultations...</MudText>
+            </div>
     }
     else if (!_documents.Any())
     {
-        <div class="d-flex justify-center">
-            <MudAlert Severity="Severity.Info" Variant="Variant.Filled" Class="pa-4 rounded-lg" Style="max-width: 600px;">
-                No active public consultations are available at this moment. Please check back later.
-            </MudAlert>
-        </div>
+            <div class="d-flex justify-center">
+                <MudAlert Severity="Severity.Info" Variant="Variant.Filled" Class="pa-4 rounded-lg" Style="max-width: 600px;">
+                    No active public consultations are available at this moment. Please check back later.
+                </MudAlert>
+            </div>
     }
     else
     {
-        <MudGrid Spacing="4">
+            <MudGrid Spacing="4">
             @foreach (var doc in _documents)
             {
-                <MudItem xs="12" sm="6" md="4">
-                    <MudCard Elevation="0" Class="h-100 d-flex flex-column rounded-xl"
-                        Style="border: 1px solid #e0e0e0; transition: transform 0.2s; cursor:pointer;"
-                        @onclick='() => NavigationManager.NavigateTo($"/consultation/{doc.Oid}")'>
-                        <div class="pa-4 rounded-t-xl" style="background-color: #f8f9fa; border-bottom: 1px solid #eeeeee;">
-                            <MudChip T="string" Color="Color.Primary" Variant="Variant.Text" Size="Size.Small"
-                                Icon="@Icons.Material.Filled.AccountBalance">@doc.MinistryOrDepartment</MudChip>
-                        </div>
-
-                        <MudCardContent Class="flex-grow-1 pt-4">
-                            <MudText Typo="Typo.h6" Class="font-weight-bold mb-2 line-clamp-2" Style="min-height: 3.2em;">
-                                @doc.Title</MudText>
-                            <MudText Typo="Typo.body2" Class="line-clamp-3 mb-4  mud-text-secondary">
-                                @doc.Description
-                            </MudText>
-
-                            <MudDivider Class="mb-3" />
-
-                            <div class="d-flex align-center justify-space-between">
-                                <div class="d-flex flex-column">
-                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Closing Date</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Error" Class="font-weight-bold">
-                                        <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" Class="mr-1"
-                                            style="vertical-align:text-bottom" />
-                                        @doc.ConsultationEndDate.ToShortDateString()
-                                    </MudText>
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudCard Elevation="0" Class="h-100 d-flex flex-column rounded-xl"
+                                Style="border: 1px solid #e0e0e0; transition: transform 0.2s; cursor:pointer;"
+                    @onclick='() => NavigationManager.NavigateTo($"/consultation/{doc.Oid}")'>
+                                <div class="pa-4 rounded-t-xl" style="background-color: #f8f9fa; border-bottom: 1px solid #eeeeee;">
+                                    <MudChip T="string" Color="Color.Primary" Variant="Variant.Text" Size="Size.Small"
+                                        Icon="@Icons.Material.Filled.AccountBalance">@doc.MinistryOrDepartment</MudChip>
                                 </div>
-                                <MudButton Variant="Variant.Text" Color="Color.Primary"
-                                    EndIcon="@Icons.Material.Filled.ArrowForward" Size="Size.Small"
-                                    OnClick="@(() => NavigationManager.NavigateTo($"/consultation/{doc.Oid}"))">Review
-                                </MudButton>
-                            </div>
-                        </MudCardContent>
-                    </MudCard>
-                </MudItem>
+
+                                <MudCardContent Class="flex-grow-1 pt-4">
+                                    <MudText Typo="Typo.h6" Class="font-weight-bold mb-2 line-clamp-2" Style="min-height: 3.2em;">
+                                @doc.Title</MudText>
+                                    <MudText Typo="Typo.body2" Class="line-clamp-3 mb-4  mud-text-secondary">
+                                @doc.Description
+                                    </MudText>
+
+                                    <MudDivider Class="mb-3" />
+
+                                    <div class="d-flex align-center justify-space-between">
+                                        <div class="d-flex flex-column">
+                                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Closing Date</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Error" Class="font-weight-bold">
+                                                <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" Class="mr-1"
+                                                    style="vertical-align:text-bottom" />
+                                        @doc.ConsultationEndDate.ToShortDateString()
+                                            </MudText>
+                                        </div>
+                                        <MudButton Variant="Variant.Text" Color="Color.Primary"
+                                            EndIcon="@Icons.Material.Filled.ArrowForward" Size="Size.Small"
+                                            OnClick="@(() => NavigationManager.NavigateTo($"/consultation/{doc.Oid}"))">Review
+                                        </MudButton>
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
             }
-        </MudGrid>
+            </MudGrid>
     }
 
     <style>
@@ -99,7 +99,8 @@
     {
         _loading = true;
         _documents = await DbContext.DraftDocuments
-        .Where(d => d.Status == "Published" && d.ConsultationEndDate >= DateTime.Today)
+        .Where(d => (d.Status == "Published" || (d.Status == "Draft" && d.ConsultationStartDate <= DateTime.Now))
+            && d.ConsultationEndDate >= DateTime.Now)
         .OrderByDescending(d => d.CreatedDate)
         .ToListAsync();
         _loading = false;

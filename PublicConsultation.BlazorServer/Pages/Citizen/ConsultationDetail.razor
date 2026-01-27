@@ -169,6 +169,21 @@
         _document = await DbContext.DraftDocuments.FirstOrDefaultAsync(d => d.Oid == Id);
         if (_document != null)
         {
+            var isAdmin = user.IsInRole("Admin");
+            if (!isAdmin)
+            {
+                var isStarted = (_document.Status == "Published" || (_document.Status == "Draft" && _document.ConsultationStartDate <=
+                DateTime.Now));
+                var isEnded = _document.ConsultationEndDate < DateTime.Now;
+
+                if (!isStarted || isEnded)
+                {
+                    Snackbar.Add("This consultation is not currently active.", Severity.Warning);
+                    NavigationManager.NavigateTo("/active-consultations");
+                    return;
+                }
+            }
+
             _rules = await DbContext.Rules.Where(r => r.DraftDocumentId == Id).OrderBy(r => r.DisplayOrder).ToListAsync();
 
             var ruleIds = _rules.Select(r => r.Oid).ToList();

@@ -98,6 +98,8 @@
             }
         }
 
-        _activeConsultationsCount = await DbContext.DraftDocuments.CountAsync(d => d.Status == "Published");
+        _activeConsultationsCount = await DbContext.DraftDocuments
+        .CountAsync(d => (d.Status == "Published" || (d.Status == "Draft" && d.ConsultationStartDate <= DateTime.Now))
+        && d.ConsultationEndDate >= DateTime.Now);
     }
 }
