@@ -34,6 +34,7 @@ builder.Services.AddServerSideBlazor()
         options.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
     });
 builder.Services.AddMudServices();
+builder.Services.AddHttpContextAccessor();
 
 // Custom Services
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAuthService, PublicConsultation.Infrastructure.Services.AuthService>();
@@ -58,8 +59,20 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+    });
+    // The default HSTS value is 30 days...
     app.UseHsts();
+}
+else
+{
+    // Also use for development if testing behind a proxy
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto
+    });
 }
 
 app.UseHttpsRedirection();

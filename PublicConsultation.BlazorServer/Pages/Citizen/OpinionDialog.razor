@@ -8,6 +8,7 @@
 @inject IAuditLogService AuditLogService
 @inject ISnackbar Snackbar
 @inject IAiAnalysisService AiService
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpContextAccessor
 
 <MudDialog>
     <DialogContent>
@@ -126,13 +127,20 @@
                 await DbContext.SaveChangesAsync();
 
                 // Log activity
+                var httpContext = HttpContextAccessor.HttpContext;
+                string ipAddress = httpContext?.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? 
+                                  httpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown";
+                
+                // Map IPv6 loopback to IPv4 for better readability
+                if (ipAddress == "::1") ipAddress = "127.0.0.1";
+
                 var user = await DbContext.UserAccounts.FindAsync(UserId);
                 await AuditLogService.LogActivityAsync(
-                "Opinion Submitted",
-                $"User {user?.Email ?? "Anonymous"} submitted an opinion for Rule {RuleNumber}",
-                user?.Email ?? "Anonymous",
-                "System",
-                null);
+                    "Opinion Submitted",
+                    $"User {user?.FullNameEnglish ?? "Anonymous"} submitted an opinion for Rule {RuleNumber}",
+                    user?.Email ?? "Anonymous",
+                    ipAddress,
+                    null);
 
                 MudDialog.Close(DialogResult.Ok(true));
             }

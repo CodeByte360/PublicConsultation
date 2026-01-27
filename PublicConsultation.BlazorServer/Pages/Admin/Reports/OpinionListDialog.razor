@@ -57,19 +57,21 @@
 
     private void Close() => MudDialog.Close();
 
-    private Color GetSentimentColor(string? s) => s switch
+    private Color GetSentimentColor(string? s)
     {
-        "Positive" => Color.Success,
-        "Negative" => Color.Error,
-        "Mixed" => Color.Warning,
-        _ => Color.Default
-    };
+        if (string.IsNullOrEmpty(s)) return Color.Default;
+        if (s.StartsWith("Positive")) return Color.Success;
+        if (s.StartsWith("Negative")) return Color.Error;
+        if (s.StartsWith("Mixed")) return Color.Warning;
+        return Color.Default;
+    }
 
-    private string GetColorHex(string? s) => s switch
+    private string GetColorHex(string? s)
     {
-        "Positive" => "#00c853", // Green
-        "Negative" => "#f44336", // Red
-        "Mixed" => "#ff9800", // Orange
-        _ => "#e0e0e0" // Grey
-    };
+        if (string.IsNullOrEmpty(s)) return "#e0e0e0";
+        if (s.StartsWith("Positive")) return "#00c853";
+        if (s.StartsWith("Negative")) return "#f44336";
+        if (s.StartsWith("Mixed")) return "#ff9800";
+        return "#e0e0e0";
+    }
 }
