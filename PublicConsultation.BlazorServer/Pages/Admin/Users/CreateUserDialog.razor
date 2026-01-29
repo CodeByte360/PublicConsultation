@@ -8,6 +8,7 @@
 @inject IAuthService AuthService
 @inject ApplicationDbContext DbContext
 @inject ISnackbar Snackbar
+@inject IBiometricService BiometricService
 
 <MudDialog>
     <TitleContent>
@@ -111,6 +112,36 @@
                     <MudTextField T="string" Label="Business / Residential Address" @bind-Value="model.Address"
                         Lines="2" Variant="Variant.Outlined" />
                 </MudItem>
+
+                <MudItem xs="12">
+                    <MudDivider Class="my-4" />
+                    <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Class="mr-2" />
+                        Biometric Registration
+                    </MudText>
+                    <MudGrid>
+                        <MudItem xs="12" sm="3">
+                            <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Left Thumb"
+                                OnCaptured="@(data => { leftThumbTemplate = data.Template; leftThumbImage = data.Image; })"
+                                ImageData="@leftThumbImage" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Left Index"
+                                OnCaptured="@(data => { leftIndexTemplate = data.Template; leftIndexImage = data.Image; })"
+                                ImageData="@leftIndexImage" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Right Thumb"
+                                OnCaptured="@(data => { rightThumbTemplate = data.Template; rightThumbImage = data.Image; })"
+                                ImageData="@rightThumbImage" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Right Index"
+                                OnCaptured="@(data => { rightIndexTemplate = data.Template; rightIndexImage = data.Image; })"
+                                ImageData="@rightIndexImage" />
+                        </MudItem>
+                    </MudGrid>
+                </MudItem>
             </MudGrid>
         </MudForm>
     </DialogContent>
@@ -132,6 +163,9 @@
     string password;
     Guid selectedRoleId;
     List<Role> Roles = new List<Role>();
+
+    string? leftThumbTemplate, leftIndexTemplate, rightThumbTemplate, rightIndexTemplate;
+    string? leftThumbImage, leftIndexImage, rightThumbImage, rightIndexImage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -173,7 +207,22 @@
             try
             {
                 model.IsVerified = true; // Admin created users are verified by default
-                await AuthService.RegisterUserAsync(model, password, selectedRoleId);
+                var registeredUser = await AuthService.RegisterUserAsync(model, password, selectedRoleId);
+
+                if (registeredUser != null && (!string.IsNullOrEmpty(leftThumbTemplate) || !string.IsNullOrEmpty(leftIndexTemplate) ||
+                !string.IsNullOrEmpty(rightThumbTemplate) || !string.IsNullOrEmpty(rightIndexTemplate)))
+                {
+                    var biometric = new Biometric
+                        {
+                            Oid = registeredUser.Oid,
+                            LeftThumb = leftThumbTemplate,
+                            LeftIndex = leftIndexTemplate,
+                            RightThumb = rightThumbTemplate,
+                            RightIndex = rightIndexTemplate
+                        };
+                    await BiometricService.SaveBiometricAsync(biometric);
+                }
+
                 Snackbar.Add("User created successfully!", Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
             }

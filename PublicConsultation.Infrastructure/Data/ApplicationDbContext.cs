@@ -19,5 +19,5 @@ public class ApplicationDbContext : DbContext
     public DbSet<Rule> Rules { get; set; }
     public DbSet<Opinion> Opinions { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
-
+    public DbSet<Biometric> Biometrics { get; set; }
 }
