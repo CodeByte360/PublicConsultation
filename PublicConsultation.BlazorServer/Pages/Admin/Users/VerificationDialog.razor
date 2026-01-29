@@ -1,58 +1,118 @@
-@using PublicConsultation.Core.Entities
-@using PublicConsultation.Core.Interfaces
+@inject IBiometricService BiometricService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
 
 <MudDialog>
     <TitleContent>
         <div class="d-flex align-center">
-            <MudIcon Icon="@(User.IsVerified ? Icons.Material.Filled.GppBad : Icons.Material.Filled.VerifiedUser)" 
-                     Class="mr-3" Color="@(User.IsVerified ? Color.Error : Color.Success)" />
+            <MudIcon Icon="@(User.IsVerified ? Icons.Material.Filled.GppBad : Icons.Material.Filled.VerifiedUser)"
+                Class="mr-3" Color="@(User.IsVerified ? Color.Error : Color.Success)" />
             <div>
                 <MudText Typo="Typo.h6">@(User.IsVerified ? "Revoke Verification" : "Verify Citizen Identity")</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Ensure the details below match the provided legal identification (NID/Passport).</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Ensure the details below match the provided legal
+                        identification (NID/Passport).</MudText>
+                </div>
             </div>
-        </div>
-    </TitleContent>
-    <DialogContent>
-        <div class="pt-4">
-            <MudAlert Severity="@(User.IsVerified ? Severity.Warning : Severity.Info)" Variant="Variant.Outlined" 
-                      Class="mb-4" Dense="true">
-                @(User.IsVerified 
-                    ? "Warning: You are about to revoke this citizen's verified status." 
+        </TitleContent>
+        <DialogContent>
+            <div class="pt-4">
+                <MudAlert Severity="@(User.IsVerified ? Severity.Warning : Severity.Info)" Variant="Variant.Outlined"
+                    Class="mb-4" Dense="true">
+                    @(User.IsVerified
+                    ? "Warning: You are about to revoke this citizen's verified status."
                     : "Please review the information carefully before granting verified status.")
             </MudAlert>
 
             <MudGrid>
                 <MudItem xs="12" sm="6">
-                    <MudField Label="Full Name (English)" Variant="Variant.Outlined" Margin="Margin.Dense" 
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person">@User.FullNameEnglish</MudField>
+                    <MudField Label="Full Name (English)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                        Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person">@User.FullNameEnglish
+                    </MudField>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudField Label="Full Name (Bangla)" Variant="Variant.Outlined" Margin="Margin.Dense">@User.FullNameBangla</MudField>
+                    <MudField Label="Full Name (Bangla)" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @User.FullNameBangla</MudField>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudField Label="NID Number" Variant="Variant.Outlined" Margin="Margin.Dense" 
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Fingerprint">@User.NIDNumber</MudField>
+                    <MudField Label="NID Number" Variant="Variant.Outlined" Margin="Margin.Dense"
+                        Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Fingerprint">@User.NIDNumber
+                    </MudField>
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudField Label="Mobile Number" Variant="Variant.Outlined" Margin="Margin.Dense" 
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Phone">@User.PhoneNumber</MudField>
+                    <MudField Label="Mobile Number" Variant="Variant.Outlined" Margin="Margin.Dense"
+                        Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Phone">@User.PhoneNumber
+                    </MudField>
                 </MudItem>
-                <MudItem xs="12">
-                    <MudField Label="Email Address" Variant="Variant.Outlined" Margin="Margin.Dense" 
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email">@User.Email</MudField>
-                </MudItem>
-                <MudItem xs="12">
-                    <MudField Label="Residential Address" Variant="Variant.Outlined" Margin="Margin.Dense" 
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Home">@User.Address</MudField>
-                </MudItem>
+
+                @if (!User.IsVerified)
+                {
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-2">Biometric Verification (Optional
+                            but Recommended)</MudText>
+
+                        @if (biometricData == null)
+                        {
+                            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">No fingerprints registered for this
+                                user.</MudAlert>
+                        }
+                        else
+                        {
+                            <MudPaper Class="pa-4 mud-background-gray" Elevation="0">
+                                <MudGrid AlignItems="Center">
+                                    <MudItem xs="12" sm="4">
+                                        <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture
+                                            Label="Verify Finger" OnCaptured="OnFingerprintCaptured"
+                                            ImageData="@capturedImage" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="8">
+                                        @if (isMatching)
+                                        {
+                                            <div class="d-flex align-center">
+                                                <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true"
+                                                    Class="mr-2" />
+                                                <MudText>Matching with registered fingers...</MudText>
+                                            </div>
+                                        }
+                                        else if (hasMatched)
+                                        {
+                                            <MudAlert Severity="Severity.Success" Variant="Variant.Filled"
+                                                Icon="@Icons.Material.Filled.CheckCircle">
+                                                Identity Verified! Match Score: @matchScore
+                                            </MudAlert>
+                                        }
+                                        else if (!string.IsNullOrEmpty(matchError))
+                                        {
+                                            <MudAlert Severity="Severity.Error" Dense="true">@matchError</MudAlert>
+                                        }
+                                        else if (!string.IsNullOrEmpty(capturedTemplate))
+                                        {
+                                            <MudAlert Severity="Severity.Error" Variant="Variant.Filled"
+                                                Icon="@Icons.Material.Filled.Error">
+                                                Verification Failed. No matching fingerprint found.
+                                            </MudAlert>
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                To verify via biometrics, capture any finger of the user. The system will match it
+                                                against all 4 stored fingerprints.
+                                            </MudText>
+                                        }
+                                    </MudItem>
+                                </MudGrid>
+                            </MudPaper>
+                        }
+                    </MudItem>
+                }
             </MudGrid>
         </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text" Class="px-6">Cancel</MudButton>
-        <MudButton Color="@(User.IsVerified ? Color.Error : Color.Success)" 
-                   Variant="Variant.Filled" OnClick="Submit" Class="px-8"
-                   StartIcon="@(User.IsVerified ? Icons.Material.Filled.RemoveModerator : Icons.Material.Filled.CheckCircle)">
+        <MudButton Color="@(User.IsVerified ? Color.Error : Color.Success)" Variant="Variant.Filled" OnClick="Submit"
+            Class="px-8"
+            StartIcon="@(User.IsVerified ? Icons.Material.Filled.RemoveModerator : Icons.Material.Filled.CheckCircle)">
             @(User.IsVerified ? "Revoke Verification" : "Confirm Verification")
         </MudButton>
     </DialogActions>
@@ -60,10 +120,84 @@
 
 @code {
     [CascadingParameter] MudDialogInstance MudDialog { get; set; }
-
     [Parameter] public UserAccount User { get; set; }
+
+    private Biometric? biometricData;
+    private string? capturedImage;
+    private string? capturedTemplate;
+    private bool isMatching;
+    private bool hasMatched;
+    private int matchScore;
+    private string? matchError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        biometricData = await BiometricService.GetBiometricByUserIdAsync(User.Oid);
+    }
+
+    private async Task OnFingerprintCaptured(PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture.FingerprintData data)
+    {
+        capturedImage = data.Image;
+        capturedTemplate = data.Template;
+        hasMatched = false;
+        matchError = null;
+        
+        if (!string.IsNullOrEmpty(capturedTemplate) && biometricData != null)
+        {
+            await RunMatchingProcess();
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task RunMatchingProcess()
+    {
+        isMatching = true;
+        StateHasChanged();
+
+        try
+        {
+            // Try matching against all 4 fingers
+            var storedTemplates = new[] { 
+                biometricData!.LeftThumb, 
+                biometricData!.LeftIndex, 
+                biometricData!.RightThumb, 
+                biometricData!.RightIndex 
+            };
+
+            foreach (var stored in storedTemplates)
+            {
+                if (string.IsNullOrEmpty(stored)) continue;
+
+                var result = await JSRuntime.InvokeAsync<SecuGenMatchResult>("window.secugen.match", capturedTemplate, stored);
+                if (result.Success && result.isMatch)
+                {
+                    hasMatched = true;
+                    matchScore = result.score;
+                    break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            matchError = "Matching service error: " + ex.Message;
+        }
+        finally
+        {
+            isMatching = false;
+            StateHasChanged();
+        }
+    }
 
     private void Cancel() => MudDialog.Cancel();
 
     private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+
+    public class SecuGenMatchResult
+    {
+        public bool Success { get; set; }
+        public int score { get; set; }
+        public bool isMatch { get; set; }
+        public string? error { get; set; }
+    }
 }

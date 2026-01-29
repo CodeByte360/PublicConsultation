@@ -20,7 +20,7 @@ public class BiometricService : IBiometricService
     public async Task<Biometric?> GetBiometricByUserIdAsync(Guid userId)
     {
         return await _context.Biometrics
-            .FirstOrDefaultAsync(b => b.Oid == userId);
+            .FirstOrDefaultAsync(b => b.UserAccountId == userId);
     }
 
     public async Task<bool> SaveBiometricAsync(Biometric biometric)
