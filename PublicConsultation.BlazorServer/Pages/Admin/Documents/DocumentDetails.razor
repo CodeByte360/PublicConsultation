@@ -70,6 +70,8 @@
                         <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" Class="mr-2"
                             Color="Color.Primary" />
                         <MudText Typo="Typo.subtitle2"><b>Consultation Timeline</b></MudText>
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                            Class="ml-2" OnClick="EditTimeline" Title="Edit Timeline" />
                     </div>
                     <MudText Typo="Typo.caption" Style="font-size: 0.9rem;">
                         @_document.ConsultationStartDate.ToString("MMM dd, yyyy") —
@@ -203,6 +205,18 @@
     {
         var parameters = new DialogParameters { ["RuleId"] = rule.Oid, ["DraftDocumentId"] = Id };
         var dialog = DialogService.Show<RuleDialog>("Edit Rule", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task EditTimeline()
+    {
+        var parameters = new DialogParameters { ["DocumentId"] = Id };
+        var dialog = DialogService.Show<TimelineDialog>("Edit Timeline", parameters);
         var result = await dialog.Result;
 
         if (!result.Canceled)

@@ -97,6 +97,11 @@
                         <LocationSelector PoliceStationId="registerModel.PoliceStationId" PoliceStationIdChanged="(val) => registerModel.PoliceStationId = val" />
                     </MudItem>
 
+                    <MudItem xs="12">
+                        <MudTextField T="string" Label="Present Address" @bind-Value="registerModel.Address" Variant="Variant.Outlined" 
+                                      Lines="2" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Home"/>
+                    </MudItem>
+
                     <MudItem xs="12" Class="d-flex justify-center mt-4">
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Elevation="2" OnClick="Submit" Size="Size.Large"
                                    FullWidth="true" Disabled="@(!success)" Class="py-2">Register</MudButton>

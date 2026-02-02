@@ -60,12 +60,11 @@
                         <MudGrid>
                             <MudItem xs="12" sm="6">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Full Name (Bangla)</MudText>
-                                <MudText Typo="Typo.body1">@(_user.FullNameBangla ?? "N/A")</MudText>
-                                </MudItem>
-                                <MudItem xs="12" sm="6">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">NID Number</MudText>
-                                    <MudText Typo="Typo.body1">@(_user.NIDNumber != 0 ? _user.NIDNumber.ToString() : "N/A")
-                                </MudText>
+                                <MudText Typo="Typo.body1">@(string.IsNullOrWhiteSpace(_user.FullNameBangla) ? "Not Provided" : _user.FullNameBangla)</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">NID Number</MudText>
+                                <MudText Typo="Typo.body1">@(_user.NIDNumber != 0 ? _user.NIDNumber.ToString() : "Not Provided")</MudText>
                             </MudItem>
                             <MudItem xs="12" sm="6">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Email Address</MudText>
@@ -73,29 +72,28 @@
                             </MudItem>
                             <MudItem xs="12" sm="6">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Phone Number</MudText>
-                                <MudText Typo="Typo.body1">@(_user.PhoneNumber ?? "N/A")</MudText>
-                                </MudItem>
-                                <MudItem xs="12">
-                                    <MudDivider Class="my-2" />
-                                </MudItem>
-                                <MudItem xs="12" sm="4">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Division</MudText>
-                                    <MudText Typo="Typo.body1">@(_user.PoliceStation?.District?.Division?.Name ?? "N/A")
-                                </MudText>
+                                <MudText Typo="Typo.body1">@(string.IsNullOrWhiteSpace(_user.PhoneNumber) ? "Not Provided" : _user.PhoneNumber)</MudText>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudDivider Class="my-2" />
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Division</MudText>
+                                <MudText Typo="Typo.body1">@(_user.PoliceStation?.District?.Division?.Name ?? "Not Provided")</MudText>
                             </MudItem>
                             <MudItem xs="12" sm="4">
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">District</MudText>
-                                <MudText Typo="Typo.body1">@(_user.PoliceStation?.District?.Name ?? "N/A")</MudText>
-                                </MudItem>
-                                <MudItem xs="12" sm="4">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Police Station</MudText>
-                                    <MudText Typo="Typo.body1">@(_user.PoliceStation?.Name ?? "N/A")</MudText>
-                                </MudItem>
-                                <MudItem xs="12">
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Address</MudText>
-                                    <MudText Typo="Typo.body1">@(_user.Address ?? "N/A")</MudText>
-                                </MudItem>
-                            </MudGrid>
+                                <MudText Typo="Typo.body1">@(_user.PoliceStation?.District?.Name ?? "Not Provided")</MudText>
+                            </MudItem>
+                            <MudItem xs="12" sm="4">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Police Station</MudText>
+                                <MudText Typo="Typo.body1">@(_user.PoliceStation?.Name ?? "Not Provided")</MudText>
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Address</MudText>
+                                <MudText Typo="Typo.body1">@(string.IsNullOrWhiteSpace(_user.Address) ? "Not Provided" : _user.Address)</MudText>
+                            </MudItem>
+                        </MudGrid>
                         </MudCardContent>
                     </MudCard>
                 </MudItem>
@@ -118,6 +116,7 @@
             if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var userId))
             {
                 _user = await DbContext.UserAccounts
+                .AsNoTracking()
                 .Include(u => u.PoliceStation)
                 .ThenInclude(ps => ps.District)
                 .ThenInclude(d => d.Division)

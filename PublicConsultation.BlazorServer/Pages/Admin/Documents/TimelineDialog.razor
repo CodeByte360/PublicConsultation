@@ -1,0 +1,88 @@
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext DbContext
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.EditCalendar" Class="mr-3" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Edit Consultation Timeline</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="pa-4">
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+                Update the official end date for receiving public feedback. The start date remains fixed as of the
+                publication.
+            </MudAlert>
+
+            <div class="d-flex flex-column gap-4">
+                <MudField Label="Consultation Start Date" Variant="Variant.Outlined" Adornment="Adornment.Start"
+                    AdornmentIcon="@Icons.Material.Filled.EventAvailable" Disabled="true">
+                    @_document?.ConsultationStartDate.ToString("MMM dd, yyyy")
+                </MudField>
+
+                <MudDatePicker Label="Extended End Date" @bind-Date="_endDate" Variant="Variant.Outlined"
+                    PickerVariant="PickerVariant.Dialog" Adornment="Adornment.Start"
+                    AdornmentIcon="@Icons.Material.Filled.EventBusy"
+                    HelperText="Citizen feedback will be automatically closed after this date." />
+            </div>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Class="px-8">Update End Date
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid DocumentId { get; set; }
+
+    private DraftDocument? _document;
+    private DateTime? _endDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _document = await DbContext.DraftDocuments.FirstOrDefaultAsync(d => d.Oid == DocumentId);
+        if (_document != null)
+        {
+            _endDate = _document.ConsultationEndDate;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (_document == null) return;
+
+        if (!_endDate.HasValue)
+        {
+            Snackbar.Add("Please select an end date.", Severity.Warning);
+            return;
+        }
+
+        if (_endDate.Value < _document.ConsultationStartDate)
+        {
+            Snackbar.Add("End date cannot be earlier than the start date.", Severity.Error);
+            return;
+        }
+
+        _document.ConsultationEndDate = _endDate.Value;
+
+        try
+        {
+            await DbContext.SaveChangesAsync();
+            Snackbar.Add("Consultation period extended successfully!", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating deadline: {ex.Message}", Severity.Error);
+        }
+    }
+}
