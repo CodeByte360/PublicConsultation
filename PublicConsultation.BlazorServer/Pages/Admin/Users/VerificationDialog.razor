@@ -4,21 +4,25 @@
 
 <MudDialog>
     <TitleContent>
-        <div class="d-flex align-center">
-            <MudIcon Icon="@(User.IsVerified ? Icons.Material.Filled.GppBad : Icons.Material.Filled.VerifiedUser)"
-                Class="mr-3" Color="@(User.IsVerified ? Color.Error : Color.Success)" />
-            <div>
-                <MudText Typo="Typo.h6">@(User.IsVerified ? "Revoke Verification" : "Verify Citizen Identity")</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Ensure the details below match the provided legal
-                        identification (NID/Passport).</MudText>
+        <div class="d-flex justify-space-between align-center">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@(User.IsVerified ? Icons.Material.Filled.GppBad : Icons.Material.Filled.VerifiedUser)"
+                    Class="mr-3" Color="@(User.IsVerified ? Color.Error : Color.Success)" />
+                <div>
+                    <MudText Typo="Typo.h6">@(User.IsVerified ? "Revoke Verification" : "Verify Citizen Identity")
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Ensure the details below match the provided
+                        legal identification (NID/Passport).</MudText>
                 </div>
             </div>
-        </TitleContent>
-        <DialogContent>
-            <div class="pt-4">
-                <MudAlert Severity="@(User.IsVerified ? Severity.Warning : Severity.Info)" Variant="Variant.Outlined"
-                    Class="mb-4" Dense="true">
-                    @(User.IsVerified
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" OnClick="Cancel" />
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="pt-4">
+            <MudAlert Severity="@(User.IsVerified ? Severity.Warning : Severity.Info)" Variant="Variant.Outlined"
+                Class="mb-4" Dense="true">
+                @(User.IsVerified
                     ? "Warning: You are about to revoke this citizen's verified status."
                     : "Please review the information carefully before granting verified status.")
             </MudAlert>
@@ -135,18 +139,19 @@
         biometricData = await BiometricService.GetBiometricByUserIdAsync(User.Oid);
     }
 
-    private async Task OnFingerprintCaptured(PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture.FingerprintData data)
+    private async Task
+    OnFingerprintCaptured(PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture.FingerprintData data)
     {
         capturedImage = data.Image;
         capturedTemplate = data.Template;
         hasMatched = false;
         matchError = null;
-        
+
         if (!string.IsNullOrEmpty(capturedTemplate) && biometricData != null)
         {
             await RunMatchingProcess();
         }
-        
+
         StateHasChanged();
     }
 
@@ -158,12 +163,12 @@
         try
         {
             // Try matching against all 4 fingers
-            var storedTemplates = new[] { 
-                biometricData!.LeftThumb, 
-                biometricData!.LeftIndex, 
-                biometricData!.RightThumb, 
-                biometricData!.RightIndex 
-            };
+            var storedTemplates = new[] {
+biometricData!.LeftThumb,
+biometricData!.LeftIndex,
+biometricData!.RightThumb,
+biometricData!.RightIndex
+};
 
             foreach (var stored in storedTemplates)
             {

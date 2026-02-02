@@ -11,12 +11,15 @@
 
 <MudDialog>
     <TitleContent>
-        <div class="d-flex align-center">
-            <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Class="mr-3" Color="Color.Primary" />
-            <div>
-                <MudText Typo="Typo.h6">Edit User Account</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Update security permissions and profile information for <b>@model.Username</b>.</MudText>
+        <div class="d-flex justify-space-between align-center">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Class="mr-3" Color="Color.Primary" />
+                <div>
+                    <MudText Typo="Typo.h6">Edit User Account</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Update security permissions and profile information for <b>@model.Username</b>.</MudText>
+                </div>
             </div>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" OnClick="Cancel" />
         </div>
     </TitleContent>
     <DialogContent>

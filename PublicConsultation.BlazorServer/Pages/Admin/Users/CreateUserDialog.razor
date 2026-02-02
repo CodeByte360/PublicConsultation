@@ -12,13 +12,16 @@
 
 <MudDialog>
     <TitleContent>
-        <div class="d-flex align-center">
-            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-3" Color="Color.Primary" />
-            <div>
-                <MudText Typo="Typo.h6">Create System User</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Register a new administrator, official, or citizen
-                    account.</MudText>
+        <div class="d-flex justify-space-between align-center">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-3" Color="Color.Primary" />
+                <div>
+                    <MudText Typo="Typo.h6">Create System User</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Register a new administrator, official, or
+                        citizen account.</MudText>
+                </div>
             </div>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" OnClick="Cancel" />
         </div>
     </TitleContent>
     <DialogContent>
@@ -119,23 +122,23 @@
                         <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Class="mr-2" />
                         Biometric Registration
                     </MudText>
-                    <MudGrid>
-                        <MudItem xs="12" sm="3">
+                    <MudGrid Spacing="3">
+                        <MudItem xs="12" sm="6" md="3">
                             <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Left Thumb"
                                 OnCaptured="@(data => { leftThumbTemplate = data.Template; leftThumbImage = data.Image; })"
                                 ImageData="@leftThumbImage" />
                         </MudItem>
-                        <MudItem xs="12" sm="3">
+                        <MudItem xs="12" sm="6" md="3">
                             <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Left Index"
                                 OnCaptured="@(data => { leftIndexTemplate = data.Template; leftIndexImage = data.Image; })"
                                 ImageData="@leftIndexImage" />
                         </MudItem>
-                        <MudItem xs="12" sm="3">
+                        <MudItem xs="12" sm="6" md="3">
                             <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Right Thumb"
                                 OnCaptured="@(data => { rightThumbTemplate = data.Template; rightThumbImage = data.Image; })"
                                 ImageData="@rightThumbImage" />
                         </MudItem>
-                        <MudItem xs="12" sm="3">
+                        <MudItem xs="12" sm="6" md="3">
                             <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Right Index"
                                 OnCaptured="@(data => { rightIndexTemplate = data.Template; rightIndexImage = data.Image; })"
                                 ImageData="@rightIndexImage" />

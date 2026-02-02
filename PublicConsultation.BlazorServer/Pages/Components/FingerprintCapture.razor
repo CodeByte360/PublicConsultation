@@ -2,34 +2,40 @@
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
 
-<MudPaper Elevation="0" Class="pa-4 border-2 border-dashed mud-border-primary"
-    Style="text-align:center; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+<MudPaper Elevation="0" Class="pa-4 d-flex flex-column align-center justify-center rounded-lg"
+    Style="border: 1px dashed var(--mud-palette-primary); background-color: rgba(var(--mud-palette-primary-rgb), 0.05); min-height: 180px; transition: all 0.3s;">
+
     @if (string.IsNullOrEmpty(ImageData))
     {
-        <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Color="Color.Default" Style="font-size: 5rem;" />
-        <MudText Typo="Typo.body2" Class="mt-2">@Label</MudText>
+        <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Color="Color.Primary" Style="font-size: 4rem; opacity: 0.7;" />
+        <MudText Typo="Typo.body2" Class="mt-2 mb-4" Align="Align.Center">@Label</MudText>
     }
     else
     {
-        <div style="position: relative;">
+        <div style="position: relative;" class="mb-2">
             <MudImage Src="@($"data:image/png;base64,{ImageData}")"
-                Style="height:120px; width:auto; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);" />
+                Style="height:100px; width:auto; border-radius: 4px; border: 1px solid #ddd;" />
             <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Error" Size="Size.Small"
-                Style="position: absolute; top: -10px; right: -10px; background: white;" OnClick="ClearCapture" />
+                Variant="Variant.Filled" Style="position: absolute; top: -8px; right: -8px; z-index:5;"
+                OnClick="ClearCapture" />
         </div>
-        <MudText Typo="Typo.caption" Color="Color.Success" Class="d-block mt-2"><b>Fingerprint Captured</b></MudText>
+        <MudText Typo="Typo.caption" Color="Color.Success" Class="d-block mb-3"><b>Captured</b></MudText>
     }
 
-    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CropFree"
-        OnClick="CaptureFingerprint" Class="mt-4" FullWidth="true" Disabled="@IsCapturing">
-        @(IsCapturing ? "Scanning..." : (string.IsNullOrEmpty(ImageData) ? "Capture" : "Re-capture"))
+    <MudButton Variant="@(string.IsNullOrEmpty(ImageData) ? Variant.Filled : Variant.Outlined)" Color="Color.Primary"
+        StartIcon="@Icons.Material.Filled.CropFree" OnClick="CaptureFingerprint" Disabled="@IsCapturing"
+        Size="Size.Small" FullWidth="true" Class="mt-auto">
+        @(IsCapturing ? "Scanning..." : (string.IsNullOrEmpty(ImageData) ? "SCAN" : "RE-SCAN"))
     </MudButton>
 
     @if (!string.IsNullOrEmpty(Error))
     {
-        <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-2">@Error</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-2 text-center"
+            Style="font-size: 0.7rem; line-height: 1.1;">@Error</MudText>
     }
 </MudPaper>
+
+@implements IDisposable
 
 @code {
     [Parameter] public string Label { get; set; } = "Place finger on scanner";
@@ -38,9 +44,12 @@
 
     private string? Error { get; set; }
     private bool IsCapturing { get; set; }
+    private bool _disposed;
 
     private async Task CaptureFingerprint()
     {
+        if (_disposed) return;
+
         IsCapturing = true;
         Error = null;
         StateHasChanged();
@@ -48,27 +57,36 @@
         try
         {
             var result = await JSRuntime.InvokeAsync<SecuGenResult>("window.secugen.capture");
+
+            if (_disposed) return;
+
             if (result.success)
             {
                 ImageData = result.image;
                 await OnCaptured.InvokeAsync(new FingerprintData { Image = result.image, Template = result.template });
-                Snackbar.Add("Fingerprint captured successfully", Severity.Success);
+                if (!_disposed) Snackbar.Add("Fingerprint captured successfully", Severity.Success);
             }
             else
             {
                 Error = result.error;
-                Snackbar.Add($"Capture failed: {result.error}", Severity.Error);
+                if (!_disposed) Snackbar.Add($"Capture failed: {result.error}", Severity.Error);
             }
         }
         catch (Exception ex)
         {
-            Error = "Scanner not found. Is SecuGen WebAPI running?";
-            Snackbar.Add(Error, Severity.Error);
+            if (!_disposed)
+            {
+                Error = "Scanner not found. Is SecuGen WebAPI running?";
+                Snackbar.Add(Error, Severity.Error);
+            }
         }
         finally
         {
-            IsCapturing = false;
-            StateHasChanged();
+            if (!_disposed)
+            {
+                IsCapturing = false;
+                StateHasChanged();
+            }
         }
     }
 
@@ -76,6 +94,11 @@
     {
         ImageData = null;
         await OnCaptured.InvokeAsync(new FingerprintData { Image = null, Template = null });
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
     }
 
     public class SecuGenResult
