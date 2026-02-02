@@ -1,0 +1,120 @@
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@inject ILocationService LocationService
+
+<MudGrid Spacing="2">
+    <MudItem xs="12" sm="4">
+        <MudSelect T="Guid?" Label="Division" Value="@_selectedDivisionId" ValueChanged="OnDivisionChanged"
+            Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Placeholder="Select Division">
+            <MudSelectItem T="Guid?" Value="null">None</MudSelectItem>
+            @foreach (var div in _divisions)
+            {
+                <MudSelectItem T="Guid?" Value="@div.Oid">@div.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudSelect T="Guid?" Label="District" Value="@_selectedDistrictId" ValueChanged="OnDistrictChanged"
+            Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Placeholder="Select District"
+            Disabled="@(!_selectedDivisionId.HasValue)">
+            <MudSelectItem T="Guid?" Value="null">None</MudSelectItem>
+            @foreach (var dist in _districts)
+            {
+                <MudSelectItem T="Guid?" Value="@dist.Oid">@dist.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" sm="4">
+        <MudSelect T="Guid?" Label="Police Station" Value="@PoliceStationId" ValueChanged="OnStationChanged"
+            Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" Placeholder="Select Police Station"
+            Disabled="@(!_selectedDistrictId.HasValue)">
+            <MudSelectItem T="Guid?" Value="null">None</MudSelectItem>
+            @foreach (var ps in _stations)
+            {
+                <MudSelectItem T="Guid?" Value="@ps.Oid">@ps.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public Guid? PoliceStationId { get; set; }
+    [Parameter] public EventCallback<Guid?> PoliceStationIdChanged { get; set; }
+
+    private IEnumerable<Division> _divisions = new List<Division>();
+    private IEnumerable<District> _districts = new List<District>();
+    private IEnumerable<PoliceStation> _stations = new List<PoliceStation>();
+
+    private Guid? _selectedDivisionId;
+    private Guid? _selectedDistrictId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _divisions = await LocationService.GetDivisionsAsync();
+
+        if (PoliceStationId.HasValue)
+        {
+            await LoadInitialState(PoliceStationId.Value);
+        }
+    }
+
+    private async Task LoadInitialState(Guid psId)
+    {
+        var ps = await LocationService.GetPoliceStationByIdAsync(psId);
+        if (ps != null)
+        {
+            _selectedDistrictId = ps.DistrictId;
+            _stations = await LocationService.GetPoliceStationsByDistrictIdAsync(_selectedDistrictId.Value);
+
+            if (ps.District != null)
+            {
+                _selectedDivisionId = ps.District.DivisionId;
+                _districts = await LocationService.GetDistrictsByDivisionIdAsync(_selectedDivisionId.Value);
+            }
+            else
+            {
+                // Fallback: load district manually if navigation property is not present
+                var district = (await LocationService.GetDistrictsAsync()).FirstOrDefault(d => d.Oid == ps.DistrictId);
+                if (district != null)
+                {
+                    _selectedDivisionId = district.DivisionId;
+                    _districts = await LocationService.GetDistrictsByDivisionIdAsync(_selectedDivisionId.Value);
+                }
+            }
+        }
+    }
+
+    private async Task OnDivisionChanged(Guid? divId)
+    {
+        _selectedDivisionId = divId;
+        _selectedDistrictId = null;
+        _districts = new List<District>();
+        _stations = new List<PoliceStation>();
+
+        if (divId.HasValue)
+        {
+            _districts = await LocationService.GetDistrictsByDivisionIdAsync(divId.Value);
+        }
+
+        await OnStationChanged(null);
+    }
+
+    private async Task OnDistrictChanged(Guid? distId)
+    {
+        _selectedDistrictId = distId;
+        _stations = new List<PoliceStation>();
+
+        if (distId.HasValue)
+        {
+            _stations = await LocationService.GetPoliceStationsByDistrictIdAsync(distId.Value);
+        }
+
+        await OnStationChanged(null);
+    }
+
+    private async Task OnStationChanged(Guid? psId)
+    {
+        PoliceStationId = psId;
+        await PoliceStationIdChanged.InvokeAsync(psId);
+    }
+}

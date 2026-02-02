@@ -9,6 +9,7 @@
 @inject ISnackbar Snackbar
 @using PublicConsultation.Core.Interfaces
 @inject IFileService FileService
+@using PublicConsultation.BlazorServer.Pages.Components
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
     <div class="d-flex align-center gap-4 mb-6">
@@ -79,11 +80,12 @@
                                 Variant="Variant.Outlined" />
                         </MudItem>
 
-                        <MudItem xs="12" sm="6">
-                            <MudTextField @bind-Value="_user.Division" Label="Division" Variant="Variant.Outlined" />
-                        </MudItem>
-                        <MudItem xs="12" sm="6">
-                            <MudTextField @bind-Value="_user.District" Label="District" Variant="Variant.Outlined" />
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-1">Location Details (Hierarchy)
+                            </MudText>
+                            <MudDivider Class="mb-4" />
+                            <LocationSelector PoliceStationId="_user.PoliceStationId"
+                                PoliceStationIdChanged="(val) => _user.PoliceStationId = val" />
                         </MudItem>
 
                         <MudItem xs="12">

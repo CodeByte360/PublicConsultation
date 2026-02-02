@@ -6,9 +6,10 @@
 @using Microsoft.AspNetCore.Components.Forms
 @inject IFileService FileService
 @inject IAuthService AuthService
-@inject ApplicationDbContext DbContext
 @inject ISnackbar Snackbar
+@using PublicConsultation.BlazorServer.Pages.Components
 @inject IBiometricService BiometricService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 
 <MudDialog>
     <TitleContent>
@@ -51,11 +52,7 @@
 
                 <MudItem xs="12" md="8">
                     <MudGrid>
-                        <MudItem xs="12" sm="6">
-                            <MudTextField T="string" Label="Username" Required="true" @bind-Value="model.Username"
-                                Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start"
-                                AdornmentIcon="@Icons.Material.Filled.AccountCircle" />
-                        </MudItem>
+
                         <MudItem xs="12" sm="6">
                             <MudTextField T="string" Label="Email Address" Required="true" InputType="InputType.Email"
                             @bind-Value="model.Email" Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -103,17 +100,18 @@
                     <MudTextField T="string" Label="NID Number" @bind-Value="model.NIDNumber" Variant="Variant.Outlined"
                         Margin="Margin.Dense" />
                 </MudItem>
-                <MudItem xs="12" sm="3">
-                    <MudTextField T="string" Label="Division" @bind-Value="model.Division" Variant="Variant.Outlined"
-                        Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12" sm="3">
-                    <MudTextField T="string" Label="District" @bind-Value="model.District" Variant="Variant.Outlined"
-                        Margin="Margin.Dense" />
-                </MudItem>
+
                 <MudItem xs="12">
                     <MudTextField T="string" Label="Business / Residential Address" @bind-Value="model.Address"
                         Lines="2" Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-1">Location Details (Hierarchy)
+                    </MudText>
+                    <MudDivider Class="mb-4" />
+                    <LocationSelector PoliceStationId="model.PoliceStationId"
+                        PoliceStationIdChanged="(val) => model.PoliceStationId = val" />
                 </MudItem>
 
                 <MudItem xs="12">
@@ -170,9 +168,11 @@
     string? leftThumbTemplate, leftIndexTemplate, rightThumbTemplate, rightIndexTemplate;
     string? leftThumbImage, leftIndexImage, rightThumbImage, rightIndexImage;
 
+
     protected override async Task OnInitializedAsync()
     {
-        Roles = await DbContext.Roles.ToListAsync();
+        using var context = DbFactory.CreateDbContext();
+        Roles = await context.Roles.AsNoTracking().ToListAsync();
         // Default to Citizen if available
         var citizen = Roles.FirstOrDefault(r => r.Name == "Citizen");
         if (citizen != null) selectedRoleId = citizen.Oid;

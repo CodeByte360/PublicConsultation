@@ -1,0 +1,87 @@
+@using PublicConsultation.Core.Entities
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Badge" Class="mr-3" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h6">User Details</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Comprehensive view of user account information</MudText>
+            </div>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="pa-4">
+            <div class="d-flex align-center mb-6">
+                <MudAvatar Color="Color.Primary" Style="height:100px; width:100px; font-size:2rem;" Class="mr-6">
+                    @if (!string.IsNullOrEmpty(User.ProfilePictureUrl))
+                    {
+                        <MudImage Src="@User.ProfilePictureUrl" />
+                    }
+                    else
+                    {
+                        @(User.FullNameEnglish?.FirstOrDefault().ToString()?.ToUpper() ?? "U")
+                    }
+                </MudAvatar>
+                <div>
+                    <MudText Typo="Typo.h5">@User.FullNameEnglish</MudText>
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@User.FullNameBangla</MudText>
+                    <div class="d-flex gap-2 mt-2">
+                        <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Text">@User.Role?.Name</MudChip>
+                        <MudChip T="string" Color="@(User.IsVerified ? Color.Success : Color.Error)" Size="Size.Small" Variant="Variant.Text">
+                            @(User.IsVerified ? "Verified" : "Unverified")
+                        </MudChip>
+                        <MudChip T="string" Color="@(User.IsActive ? Color.Success : Color.Default)" Size="Size.Small" Variant="Variant.Text">
+                            @(User.IsActive ? "Active" : "Inactive")
+                        </MudChip>
+                    </div>
+                </div>
+            </div>
+
+            <MudDivider Class="mb-6" />
+
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Email Address</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-4">@User.Email</MudText>
+
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Phone Number</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-4">@(User.PhoneNumber ?? "Not Provided")</MudText>
+
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">NID Number</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-4">@(User.NIDNumber ?? "Not Provided")</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Designation</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-4">@(User.Designation ?? "Not Specified")</MudText>
+
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Office / Location</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-4">
+                        @if (User.PoliceStation != null)
+                        {
+                            @($"{User.PoliceStation.Name}, {User.PoliceStation.District?.Name}, {User.PoliceStation.District?.Division?.Name}")
+                        }
+                        else
+                        {
+                            <span class="font-italic">Not Assigned</span>
+                        }
+                    </MudText>
+
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Residential Address</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-4">@(User.Address ?? "Not Provided")</MudText>
+                </MudItem>
+            </MudGrid>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Close" Class="px-8">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public UserAccount User { get; set; } = new();
+
+    private void Close() => MudDialog.Close();
+}

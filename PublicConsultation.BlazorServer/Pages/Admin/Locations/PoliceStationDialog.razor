@@ -1,0 +1,117 @@
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@inject ILocationService LocationService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@(Model.Oid == Guid.Empty ? Icons.Material.Filled.Add : Icons.Material.Filled.Edit)"
+                Class="mr-3 mb-n1" />
+            @(Model.Oid == Guid.Empty ? "Add New Police Station" : "Edit Police Station")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudSelect T="Guid?" Label="Select Division" Value="@_selectedDivisionId" ValueChanged="OnDivisionChanged"
+                Required="true" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4"
+                Placeholder="Select Division">
+                @foreach (var div in _divisions)
+                {
+                    <MudSelectItem T="Guid?" Value="@div.Oid">@div.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="Guid?" Label="Select District" @bind-Value="_selectedDistrictId" Required="true"
+                Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4" Placeholder="Select District"
+                Disabled="@(!_selectedDivisionId.HasValue)">
+                @foreach (var dist in _districts)
+                {
+                    <MudSelectItem T="Guid?" Value="@dist.Oid">@dist.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField Label="Station Name" @bind-Value="Model.Name" Required="true"
+                RequiredError="Station name is required!" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success)">Save
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public PoliceStation Model { get; set; } = new PoliceStation();
+
+    private IEnumerable<Division> _divisions = new List<Division>();
+    private IEnumerable<District> _districts = new List<District>();
+    private Guid? _selectedDivisionId;
+    private Guid? _selectedDistrictId;
+
+    MudForm form;
+    bool success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _divisions = await LocationService.GetDivisionsAsync();
+
+        if (Model.DistrictId != Guid.Empty)
+        {
+            var district = await LocationService.GetDistrictByIdAsync(Model.DistrictId);
+            if (district != null)
+            {
+                _selectedDivisionId = district.DivisionId;
+                _districts = await LocationService.GetDistrictsByDivisionIdAsync(_selectedDivisionId.Value);
+                _selectedDistrictId = Model.DistrictId;
+            }
+        }
+    }
+
+    private async Task OnDivisionChanged(Guid? divisionId)
+    {
+        _selectedDivisionId = divisionId;
+        _selectedDistrictId = null;
+        if (divisionId.HasValue)
+        {
+            _districts = await LocationService.GetDistrictsByDivisionIdAsync(divisionId.Value);
+        }
+        else
+        {
+            _districts = new List<District>();
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            Model.DistrictId = _selectedDistrictId ?? Guid.Empty;
+            bool result;
+            if (Model.Oid == Guid.Empty)
+            {
+                Model.Oid = Guid.NewGuid();
+                result = await LocationService.SavePoliceStationAsync(Model);
+            }
+            else
+            {
+                result = await LocationService.UpdatePoliceStationAsync(Model);
+            }
+
+            if (result)
+            {
+                Snackbar.Add("Police Station saved successfully", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Error saving station", Severity.Error);
+            }
+        }
+    }
+}

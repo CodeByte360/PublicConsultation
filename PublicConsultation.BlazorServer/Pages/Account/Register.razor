@@ -52,10 +52,7 @@
                         </MudFileUpload>
                     </MudItem>
 
-                    <MudItem xs="12" sm="6">
-                        <MudTextField T="string" Label="Username" Required="true" RequiredError="Username is required!"
-                                      @bind-Value="registerModel.Username" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"/>
-                    </MudItem>
+
                     <MudItem xs="12" sm="6">
                         <MudTextField T="string" Label="Email" Required="true" RequiredError="Email is required!"
                                       @bind-Value="registerModel.Email" InputType="InputType.Email" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"/>
@@ -92,17 +89,14 @@
                     <MudItem xs="12">
                         <MudTextField T="string" Label="Designation/Occupation" @bind-Value="registerModel.Designation" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Work"/>
                     </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField T="string" Label="Division" @bind-Value="registerModel.Division" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
-                        <MudTextField T="string" Label="District" @bind-Value="registerModel.District" Variant="Variant.Outlined" />
-                    </MudItem>
+
                     <MudItem xs="12">
-                        <MudTextField T="string" Label="Address" @bind-Value="registerModel.Address" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Home" Lines="2"/>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-1"><strong>Location Information</strong></MudText>
+                        <MudDivider Class="mb-4" />
+                        <LocationSelector PoliceStationId="registerModel.PoliceStationId" PoliceStationIdChanged="(val) => registerModel.PoliceStationId = val" />
                     </MudItem>
-                    
-                     <MudItem xs="12" Class="d-flex justify-center mt-4">
+
+                    <MudItem xs="12" Class="d-flex justify-center mt-4">
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Elevation="2" OnClick="Submit" Size="Size.Large"
                                    FullWidth="true" Disabled="@(!success)" Class="py-2">Register</MudButton>
                     </MudItem>

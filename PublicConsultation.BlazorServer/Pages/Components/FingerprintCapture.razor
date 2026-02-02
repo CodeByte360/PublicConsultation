@@ -7,8 +7,17 @@
 
     @if (string.IsNullOrEmpty(ImageData))
     {
-        <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Color="Color.Primary" Style="font-size: 4rem; opacity: 0.7;" />
-        <MudText Typo="Typo.body2" Class="mt-2 mb-4" Align="Align.Center">@Label</MudText>
+        if (IsRegistered)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Style="font-size: 4rem; opacity: 0.9;" />
+            <MudText Typo="Typo.body2" Class="mt-2 mb-4" Align="Align.Center">@Label</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Success" Class="d-block mb-3"><b>Registered</b></MudText>
+        }
+        else
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Color="Color.Primary" Style="font-size: 4rem; opacity: 0.7;" />
+            <MudText Typo="Typo.body2" Class="mt-2 mb-4" Align="Align.Center">@Label</MudText>
+        }
     }
     else
     {
@@ -22,10 +31,10 @@
         <MudText Typo="Typo.caption" Color="Color.Success" Class="d-block mb-3"><b>Captured</b></MudText>
     }
 
-    <MudButton Variant="@(string.IsNullOrEmpty(ImageData) ? Variant.Filled : Variant.Outlined)" Color="Color.Primary"
-        StartIcon="@Icons.Material.Filled.CropFree" OnClick="CaptureFingerprint" Disabled="@IsCapturing"
-        Size="Size.Small" FullWidth="true" Class="mt-auto">
-        @(IsCapturing ? "Scanning..." : (string.IsNullOrEmpty(ImageData) ? "SCAN" : "RE-SCAN"))
+    <MudButton Variant="@(string.IsNullOrEmpty(ImageData) && !IsRegistered ? Variant.Filled : Variant.Outlined)"
+        Color="Color.Primary" StartIcon="@Icons.Material.Filled.CropFree" OnClick="CaptureFingerprint"
+        Disabled="@IsCapturing" Size="Size.Small" FullWidth="true" Class="mt-auto">
+        @(IsCapturing ? "Scanning..." : (string.IsNullOrEmpty(ImageData) && !IsRegistered ? "SCAN" : "RE-SCAN"))
     </MudButton>
 
     @if (!string.IsNullOrEmpty(Error))
@@ -41,6 +50,7 @@
     [Parameter] public string Label { get; set; } = "Place finger on scanner";
     [Parameter] public EventCallback<FingerprintData> OnCaptured { get; set; }
     [Parameter] public string? ImageData { get; set; }
+    [Parameter] public bool IsRegistered { get; set; }
 
     private string? Error { get; set; }
     private bool IsCapturing { get; set; }

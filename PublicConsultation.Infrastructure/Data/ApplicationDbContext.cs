@@ -13,6 +13,9 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<UserAccount> UserAccounts { get; set; }
     public DbSet<Role> Roles { get; set; }
+    public DbSet<Division> Divisions { get; set; }
+    public DbSet<District> Districts { get; set; }
+    public DbSet<PoliceStation> PoliceStations { get; set; }
     public DbSet<AiAnalysisResult> AiAnalysisResults { get; set; }
     public DbSet<DraftDocument> DraftDocuments { get; set; }
     public DbSet<Ministry> Ministries { get; set; }

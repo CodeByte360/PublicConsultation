@@ -16,6 +16,8 @@ builder.Host.UseSerilog();
 
 // Add services to the container.
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString));
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 
@@ -51,6 +53,7 @@ builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IAuditLogService, 
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IMinistryService, PublicConsultation.Infrastructure.Services.MinistryService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IFileService, PublicConsultation.Infrastructure.Services.FileService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IBiometricService, PublicConsultation.Infrastructure.Services.BiometricService>();
+builder.Services.AddScoped<PublicConsultation.Core.Interfaces.ILocationService, PublicConsultation.Infrastructure.Services.LocationService>();
 builder.Services.AddHostedService<PublicConsultation.Infrastructure.Services.ConsultationStatusHostedService>();
 builder.Services.AddControllers();
 

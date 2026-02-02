@@ -24,7 +24,7 @@ public static class DbSeeder
             await context.SaveChangesAsync();
         }
 
-        var adminUser = await context.UserAccounts.Include(u => u.Role).FirstOrDefaultAsync(u => u.Username == "admin");
+        var adminUser = await context.UserAccounts.Include(u => u.Role).FirstOrDefaultAsync(u => u.Email == "admin@consultation.gov.bd");
         var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == "Admin");
 
         if (adminRole != null)
@@ -33,7 +33,6 @@ public static class DbSeeder
             {
                 adminUser = new UserAccount
                 {
-                    Username = "admin",
                     Email = "admin@consultation.gov.bd",
                     FullNameEnglish = "System Administrator",
                     IsVerified = true,

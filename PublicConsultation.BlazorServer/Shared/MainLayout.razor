@@ -97,6 +97,15 @@
                             Icon="@Icons.Material.Filled.People">User Management</MudNavLink>
                         <MudNavLink Href="/admin/ministries" Match="NavLinkMatch.Prefix"
                             Icon="@Icons.Material.Filled.AccountBalance">Ministries</MudNavLink>
+
+                        <MudNavGroup Title="Locations" Icon="@Icons.Material.Filled.LocationOn" Expanded="false">
+                            <MudNavLink Href="/admin/locations/divisions" Match="NavLinkMatch.Prefix">Divisions
+                            </MudNavLink>
+                            <MudNavLink Href="/admin/locations/districts" Match="NavLinkMatch.Prefix">Districts
+                            </MudNavLink>
+                            <MudNavLink Href="/admin/locations/police-stations" Match="NavLinkMatch.Prefix">Police
+                                Stations</MudNavLink>
+                        </MudNavGroup>
                     </AuthorizeView>
 
                     <AuthorizeView Roles="Admin,Official" Context="officialContext">

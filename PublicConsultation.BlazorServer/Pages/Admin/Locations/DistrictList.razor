@@ -1,0 +1,119 @@
+@page "/admin/locations/districts"
+@attribute [Authorize(Roles = "Admin")]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@inject ILocationService LocationService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <div>
+            <MudText Typo="Typo.h5">Districts</MudText>
+            <MudBreadcrumbs Items="_breadcrumbs" />
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+            OnClick="OpenCreateDialog">Add District</MudButton>
+    </div>
+
+    <MudTable Items="@_districts" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="25"
+        Class="rounded-lg">
+        <HeaderContent>
+            <MudTh>Division</MudTh>
+            <MudTh>District Name</MudTh>
+            <MudTh Style="text-align:right">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Division">@context.Division?.Name</MudTd>
+            <MudTd DataLabel="District Name">@context.Name</MudTd>
+            <MudTd DataLabel="Actions" Style="text-align:right">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info"
+                    OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                    OnClick="@(() => DeleteDistrict(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No districts found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private IEnumerable<District> _districts = new List<District>();
+    private bool _loading = true;
+    private List<BreadcrumbItem> _breadcrumbs = new List<BreadcrumbItem>
+{
+new BreadcrumbItem("Dashboard", href: "/admin/dashboard"),
+new BreadcrumbItem("Locations", href: null, disabled: true),
+new BreadcrumbItem("Districts", href: null, disabled: true)
+};
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _districts = await LocationService.GetDistrictsAsync();
+        _loading = false;
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = DialogService.Show<DistrictDialog>("Add New District", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task OpenEditDialog(District district)
+    {
+        var parameters = new DialogParameters
+            {
+                ["Model"] = new District
+                {
+                    Oid = district.Oid,
+                    Name = district.Name,
+                    DivisionId
+            = district.DivisionId
+                }
+            };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = DialogService.Show<DistrictDialog>("Edit District", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task DeleteDistrict(District district)
+    {
+        bool? confirm = await DialogService.ShowMessageBox(
+        "Delete District",
+        $"Are you sure you want to delete {district.Name}? This may affect linked police stations.",
+        yesText: "Delete", cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            var success = await LocationService.DeleteDistrictAsync(district.Oid);
+            if (success)
+            {
+                Snackbar.Add("District deleted successfully", Severity.Success);
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add("Failed to delete district.", Severity.Error);
+            }
+        }
+    }
+}

@@ -20,7 +20,6 @@
         LoadingProgressColor="Color.Info">
         <HeaderContent>
             <MudTh>Avatar</MudTh>
-            <MudTh>Username</MudTh>
             <MudTh>Email</MudTh>
             <MudTh>Full Name</MudTh>
             <MudTh>Role</MudTh>
@@ -41,7 +40,6 @@
                     }
                 </MudAvatar>
             </MudTd>
-            <MudTd DataLabel="Username">@context.Username</MudTd>
             <MudTd DataLabel="Email">@context.Email</MudTd>
             <MudTd DataLabel="Full Name">@context.FullNameEnglish</MudTd>
             <MudTd DataLabel="Role">
@@ -69,6 +67,8 @@
                     Label="@(context.IsActive ? "Active" : "Inactive")" />
             </MudTd>
             <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Primary"
+                    OnClick="@(() => ShowDetails(context))" />
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info"
                     OnClick="@(() => EditUser(context))" />
             </MudTd>
@@ -88,8 +88,22 @@
     private async Task LoadUsers()
     {
         _loading = true;
-        Users = await DbContext.UserAccounts.Include(u => u.Role).OrderBy(u => u.Username).ToListAsync();
+        Users = await DbContext.UserAccounts
+        .Include(u => u.Role)
+        .Include(u => u.PoliceStation)
+        .ThenInclude(p => p!.District)
+        .ThenInclude(d => d!.Division)
+        .OrderBy(u => u.Email)
+        .AsNoTracking()
+        .ToListAsync();
         _loading = false;
+    }
+
+    private async Task ShowDetails(UserAccount user)
+    {
+        var parameters = new DialogParameters { ["User"] = user };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        DialogService.Show<UserDetailsDialog>("User Details", parameters, options);
     }
 
     private async Task CreateUser()

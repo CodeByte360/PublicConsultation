@@ -4,9 +4,11 @@
 @using Microsoft.EntityFrameworkCore
 @using System.IO
 @using Microsoft.AspNetCore.Components.Forms
+@using PublicConsultation.BlazorServer.Pages.Components
 @inject IFileService FileService
 @inject IAuthService AuthService
-@inject ApplicationDbContext DbContext
+@inject IBiometricService BiometricService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -16,7 +18,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Class="mr-3" Color="Color.Primary" />
                 <div>
                     <MudText Typo="Typo.h6">Edit User Account</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Update security permissions and profile information for <b>@model.Username</b>.</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Update security permissions and profile information for <b>@model.Email</b>.</MudText>
                 </div>
             </div>
             <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default" OnClick="Cancel" />
@@ -48,10 +50,7 @@
 
                 <MudItem xs="12" md="8">
                     <MudGrid>
-                        <MudItem xs="12" sm="6">
-                            <MudTextField T="string" Label="Username" Required="true" @bind-Value="model.Username" 
-                                          Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AccountCircle" />
-                        </MudItem>
+
                         <MudItem xs="12" sm="6">
                             <MudTextField T="string" Label="Email Address" Required="true" InputType="InputType.Email"
                                           @bind-Value="model.Email" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" />
@@ -64,10 +63,12 @@
                         </MudItem>
                         <MudItem xs="12" sm="6">
                             <MudSelect T="Guid" Label="Assign Role" Required="true" @bind-Value="model.RoleId"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Security">
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter" 
+                                       Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Security"
+                                       Placeholder="Select Role">
                                 @foreach (var role in Roles)
                                 {
-                                    <MudSelectItem Value="@role.Oid">@role.Name</MudSelectItem>
+                                    <MudSelectItem T="Guid" Value="@role.Oid">@role.Name</MudSelectItem>
                                 }
                             </MudSelect>
                         </MudItem>
@@ -91,14 +92,52 @@
                 <MudItem xs="12" sm="6">
                     <MudTextField T="string" Label="NID Number" @bind-Value="model.NIDNumber" Variant="Variant.Outlined" Margin="Margin.Dense" />
                 </MudItem>
-                <MudItem xs="12" sm="3">
-                    <MudTextField T="string" Label="Division" @bind-Value="model.Division" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
-                <MudItem xs="12" sm="3">
-                    <MudTextField T="string" Label="District" @bind-Value="model.District" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                </MudItem>
+
                 <MudItem xs="12">
                     <MudTextField T="string" Label="Business / Residential Address" @bind-Value="model.Address" Lines="2" Variant="Variant.Outlined" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="mb-1">Location Details (Hierarchy)</MudText>
+                    <MudDivider Class="mb-4" />
+                    <LocationSelector PoliceStationId="model.PoliceStationId" PoliceStationIdChanged="(val) => model.PoliceStationId = val" />
+                </MudItem>
+
+                <MudItem xs="12"><MudDivider Class="my-2"/></MudItem>
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary" Class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Fingerprint" Class="mr-2" />
+                        Update Biometric Data
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Scan a finger to update/register it. Existing data is preserved unless overwritten.</MudText>
+                    
+                    <MudGrid Spacing="3" Class="mt-2">
+                        <MudItem xs="12" sm="6" md="3">
+                            <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Left Thumb"
+                                IsRegistered="@(!string.IsNullOrEmpty(existingBiometric?.LeftThumb))"
+                                OnCaptured="@(data => { leftThumbTemplate = data.Template; leftThumbImage = data.Image; })"
+                                ImageData="@leftThumbImage" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Left Index"
+                                IsRegistered="@(!string.IsNullOrEmpty(existingBiometric?.LeftIndex))"
+                                OnCaptured="@(data => { leftIndexTemplate = data.Template; leftIndexImage = data.Image; })"
+                                ImageData="@leftIndexImage" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Right Thumb"
+                                IsRegistered="@(!string.IsNullOrEmpty(existingBiometric?.RightThumb))"
+                                OnCaptured="@(data => { rightThumbTemplate = data.Template; rightThumbImage = data.Image; })"
+                                ImageData="@rightThumbImage" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Right Index"
+                                IsRegistered="@(!string.IsNullOrEmpty(existingBiometric?.RightIndex))"
+                                OnCaptured="@(data => { rightIndexTemplate = data.Template; rightIndexImage = data.Image; })"
+                                ImageData="@rightIndexImage" />
+                        </MudItem>
+                    </MudGrid>
                 </MudItem>
             </MudGrid>
         </MudForm>
@@ -121,28 +160,33 @@
     UserAccount model = new UserAccount();
     string newPassword;
     List<Role> Roles = new List<Role>();
-
     bool _passwordVisible = false;
     string _passwordInputIcon => _passwordVisible ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
 
+    Biometric? existingBiometric;
+    string? leftThumbImage, leftThumbTemplate;
+    string? leftIndexImage, leftIndexTemplate;
+    string? rightThumbImage, rightThumbTemplate;
+    string? rightIndexImage, rightIndexTemplate;
+
     protected override async Task OnInitializedAsync()
     {
-        Roles = await DbContext.Roles.ToListAsync();
+        using var context = DbFactory.CreateDbContext();
+        Roles = await context.Roles.AsNoTracking().ToListAsync();
+        existingBiometric = await BiometricService.GetBiometricByUserIdAsync(User.Oid);
 
         // Map existing user to model
         model.Oid = User.Oid;
-        model.Username = User.Username;
-        model.Email = User.Email;
-        model.FullNameEnglish = User.FullNameEnglish;
-        model.FullNameBangla = User.FullNameBangla;
-        model.Designation = User.Designation;
-        model.PhoneNumber = User.PhoneNumber;
-        model.NIDNumber = User.NIDNumber;
-        model.Division = User.Division;
-        model.District = User.District;
-        model.Address = User.Address;
         model.RoleId = User.RoleId;
         model.ProfilePictureUrl = User.ProfilePictureUrl;
+        model.FullNameEnglish = User.FullNameEnglish;
+        model.FullNameBangla = User.FullNameBangla;
+        model.Email = User.Email;
+        model.PhoneNumber = User.PhoneNumber;
+        model.NIDNumber = User.NIDNumber;
+        model.Designation = User.Designation;
+        model.Address = User.Address;
+        model.PoliceStationId = User.PoliceStationId;
     }
 
     private void TogglePasswordVisibility()
@@ -180,23 +224,23 @@
         {
             try
             {
-                var userToUpdate = await DbContext.UserAccounts.FindAsync(model.Oid);
+                using var context = DbFactory.CreateDbContext();
+                var userToUpdate = await context.UserAccounts.FindAsync(model.Oid);
                 if (userToUpdate == null)
                 {
                     Snackbar.Add("User not found.", Severity.Error);
                     return;
                 }
 
-                userToUpdate.Username = model.Username;
+                // Update properties
                 userToUpdate.Email = model.Email;
                 userToUpdate.FullNameEnglish = model.FullNameEnglish;
                 userToUpdate.FullNameBangla = model.FullNameBangla;
                 userToUpdate.Designation = model.Designation;
                 userToUpdate.PhoneNumber = model.PhoneNumber;
                 userToUpdate.NIDNumber = model.NIDNumber;
-                userToUpdate.Division = model.Division;
-                userToUpdate.District = model.District;
                 userToUpdate.Address = model.Address;
+                userToUpdate.PoliceStationId = model.PoliceStationId;
                 userToUpdate.RoleId = model.RoleId;
                 userToUpdate.ProfilePictureUrl = model.ProfilePictureUrl;
 
@@ -205,10 +249,31 @@
                     userToUpdate.PasswordHash = AuthService.HashPassword(newPassword);
                 }
 
-                DbContext.UserAccounts.Update(userToUpdate);
-                await DbContext.SaveChangesAsync();
+                context.UserAccounts.Update(userToUpdate);
+                await context.SaveChangesAsync();
 
-                Snackbar.Add("User updated successfully!", Severity.Success);
+                // Handle Biometric Updates
+                bool bioChanged = false;
+                var bio = existingBiometric ?? new Biometric { Oid = Guid.NewGuid(), UserAccountId = model.Oid };
+                
+                if (!string.IsNullOrEmpty(leftThumbTemplate)) { bio.LeftThumb = leftThumbTemplate; bioChanged = true; }
+                if (!string.IsNullOrEmpty(leftIndexTemplate)) { bio.LeftIndex = leftIndexTemplate; bioChanged = true; }
+                if (!string.IsNullOrEmpty(rightThumbTemplate)) { bio.RightThumb = rightThumbTemplate; bioChanged = true; }
+                if (!string.IsNullOrEmpty(rightIndexTemplate)) { bio.RightIndex = rightIndexTemplate; bioChanged = true; }
+
+                if (bioChanged)
+                {
+                    if (existingBiometric == null)
+                    {
+                        await BiometricService.SaveBiometricAsync(bio);
+                    }
+                    else
+                    {
+                        await BiometricService.UpdateBiometricAsync(bio);
+                    }
+                }
+
+                Snackbar.Add("User account updated successfully!", Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
             }
             catch (Exception ex)

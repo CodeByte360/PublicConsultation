@@ -1,0 +1,106 @@
+@page "/admin/locations/police-stations"
+@attribute [Authorize(Roles = "Admin")]
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Interfaces
+@inject ILocationService LocationService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <div>
+            <MudText Typo="Typo.h5">Police Stations (Thana)</MudText>
+            <MudBreadcrumbs Items="_breadcrumbs" />
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">Add Station</MudButton>
+    </div>
+
+    <MudTable Items="@_stations" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="25" Class="rounded-lg">
+        <HeaderContent>
+            <MudTh>District</MudTh>
+            <MudTh>Station Name</MudTh>
+            <MudTh Style="text-align:right">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="District">@context.District?.Name</MudTd>
+            <MudTd DataLabel="Station Name">@context.Name</MudTd>
+            <MudTd DataLabel="Actions" Style="text-align:right">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteStation(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No stations found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private IEnumerable<PoliceStation> _stations = new List<PoliceStation>();
+    private bool _loading = true;
+    private List<BreadcrumbItem> _breadcrumbs = new List<BreadcrumbItem>
+    {
+        new BreadcrumbItem("Dashboard", href: "/admin/dashboard"),
+        new BreadcrumbItem("Locations", href: null, disabled: true),
+        new BreadcrumbItem("Police Stations", href: null, disabled: true)
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _loading = true;
+        _stations = await LocationService.GetPoliceStationsAsync();
+        _loading = false;
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = DialogService.Show<PoliceStationDialog>("Add New Police Station", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task OpenEditDialog(PoliceStation station)
+    {
+        var parameters = new DialogParameters { ["Model"] = new PoliceStation { Oid = station.Oid, Name = station.Name, DistrictId = station.DistrictId } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = DialogService.Show<PoliceStationDialog>("Edit Police Station", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task DeleteStation(PoliceStation station)
+    {
+        bool? confirm = await DialogService.ShowMessageBox(
+            "Delete Station", 
+            $"Are you sure you want to delete {station.Name}?", 
+            yesText:"Delete", cancelText:"Cancel");
+
+        if (confirm == true)
+        {
+            var success = await LocationService.DeletePoliceStationAsync(station.Oid);
+            if (success)
+            {
+                Snackbar.Add("Station deleted successfully", Severity.Success);
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add("Failed to delete station.", Severity.Error);
+            }
+        }
+    }
+}
