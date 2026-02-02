@@ -5,65 +5,85 @@
 @inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
-    <MudText Typo="Typo.h4" Class="mb-6">Public Audit Log</MudText>
+    <MudText Typo="Typo.h4" Class="mb-4">Public Audit Log</MudText>
     <MudText Typo="Typo.body1" Class="mb-4">
         To ensure transparency and trust, all major activities regarding draft documents are recorded in this
         immutable-style audit log.
     </MudText>
 
+    <MudAlert Severity="(_isIntegrityVerified ? Severity.Success : Severity.Error)" Variant="Variant.Filled"
+        Class="mb-6">
+        @(_isIntegrityVerified
+            ? "Structure Integrity Verified: All log hashes match the blockchain-lite chain."
+            : "Warning: Log integrity could not be verified. Please contact system administration.")
+    </MudAlert>
+
     @inject IDialogService DialogService
 
-    @if (_loading)
-    {
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-    }
-    else
-    {
-        <MudAlert Severity="(_isIntegrityVerified ? Severity.Success : Severity.Error)" Variant="Variant.Filled"
-            Class="mb-6">
-            @(_isIntegrityVerified
-                ? "Structure Integrity Verified: All log hashes match the blockchain-lite chain."
-                : "Warning: Log integrity could not be verified. Please contact system administration.")
-        </MudAlert>
-
-        <MudTable Items="@_logs" T="AuditLog" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="4">
-            <HeaderContent>
-                <MudTh>Timestamp</MudTh>
-                <MudTh>Activity</MudTh>
-                <MudTh>Document</MudTh>
-                <MudTh>Details</MudTh>
-                <MudTh>Action</MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Timestamp">@context.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
-                <MudTd DataLabel="Activity">
-                    <MudChip T="string" Color="Color.Info" Size="Size.Small">@context.Activity</MudChip>
-                </MudTd>
-                <MudTd DataLabel="Document">
-                    @(context.RelatedDocument?.Title ?? "N/A")
-                </MudTd>
-                <MudTd DataLabel="Details">
-                    <MudText Typo="Typo.body2"
-                        Style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
-                        @context.Details
-                    </MudText>
-                </MudTd>
-                <MudTd DataLabel="Action">
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Primary"
-                        OnClick="@(() => OpenDetails(context))">View Details</MudButton>
-                </MudTd>
-            </RowTemplate>
-            <PagerContent>
-                <MudTablePager />
-            </PagerContent>
-        </MudTable>
-    }
+    <MudTable Items="@_logs" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="4" Loading="@_loading"
+        Filter="new Func<AuditLog,bool>(FilterFunc1)">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Audit Log Entries</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Search by Activity, Document or Details"
+                Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                Class="mt-0" Immediate="true" Clearable="true"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Timestamp</MudTh>
+            <MudTh>Activity</MudTh>
+            <MudTh>Document</MudTh>
+            <MudTh>Details</MudTh>
+            <MudTh Style="text-align:right">Action</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Timestamp">@context.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+            <MudTd DataLabel="Activity">
+                <MudChip T="string" Color="Color.Info" Size="Size.Small">@context.Activity</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Document">
+                @(context.RelatedDocument?.Title ?? "N/A")
+            </MudTd>
+            <MudTd DataLabel="Details">
+                <MudText Typo="Typo.body2"
+                    Style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                    @context.Details
+                </MudText>
+            </MudTd>
+            <MudTd DataLabel="Action" Style="text-align:right">
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Primary"
+                    OnClick="@(() => OpenDetails(context))" Title="View Details" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+        <NoRecordsContent>
+            <MudText>No audit log entries found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
 </MudContainer>
 
 @code {
     private List<AuditLog> _logs = new();
     private bool _loading = true;
     private bool _isIntegrityVerified = false;
+    private string _searchString = "";
+
+    private bool FilterFunc1(AuditLog element) => FilterFunc(element, _searchString);
+
+    private bool FilterFunc(AuditLog element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Activity.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.Details?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        if (element.RelatedDocument?.Title.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        return false;
+    }
 
     protected override async Task OnInitializedAsync()
     {
