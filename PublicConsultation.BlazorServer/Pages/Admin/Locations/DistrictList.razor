@@ -17,7 +17,14 @@
     </div>
 
     <MudTable Items="@_districts" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="25"
-        Class="rounded-lg">
+        Class="rounded-lg" Filter="new Func<District,bool>(FilterFunc1)">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">District List</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Search by Name or Division"
+                Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                Class="mt-0" Immediate="true" Clearable="true"></MudTextField>
+        </ToolBarContent>
         <HeaderContent>
             <MudTh>Division</MudTh>
             <MudTh>District Name</MudTh>
@@ -33,6 +40,9 @@
                     OnClick="@(() => DeleteDistrict(context))" />
             </MudTd>
         </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
         <NoRecordsContent>
             <MudText>No districts found.</MudText>
         </NoRecordsContent>
@@ -42,6 +52,20 @@
 @code {
     private IEnumerable<District> _districts = new List<District>();
     private bool _loading = true;
+    private string _searchString = "";
+
+    private bool FilterFunc1(District element) => FilterFunc(element, _searchString);
+
+    private bool FilterFunc(District element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.Division?.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        return false;
+    }
     private List<BreadcrumbItem> _breadcrumbs = new List<BreadcrumbItem>
 {
 new BreadcrumbItem("Dashboard", href: "/admin/dashboard"),

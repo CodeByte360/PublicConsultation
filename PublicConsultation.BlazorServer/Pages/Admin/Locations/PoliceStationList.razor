@@ -12,10 +12,19 @@
             <MudText Typo="Typo.h5">Police Stations (Thana)</MudText>
             <MudBreadcrumbs Items="_breadcrumbs" />
         </div>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">Add Station</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+            OnClick="OpenCreateDialog">Add Station</MudButton>
     </div>
 
-    <MudTable Items="@_stations" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="25" Class="rounded-lg">
+    <MudTable Items="@_stations" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="25"
+        Class="rounded-lg" Filter="new Func<PoliceStation,bool>(FilterFunc1)">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Police Station List</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Search by Name, District or Division"
+                Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                Class="mt-0" Immediate="true" Clearable="true"></MudTextField>
+        </ToolBarContent>
         <HeaderContent>
             <MudTh>District</MudTh>
             <MudTh>Station Name</MudTh>
@@ -25,10 +34,15 @@
             <MudTd DataLabel="District">@context.District?.Name</MudTd>
             <MudTd DataLabel="Station Name">@context.Name</MudTd>
             <MudTd DataLabel="Actions" Style="text-align:right">
-                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" OnClick="@(() => OpenEditDialog(context))" />
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteStation(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info"
+                    OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                    OnClick="@(() => DeleteStation(context))" />
             </MudTd>
         </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
         <NoRecordsContent>
             <MudText>No stations found.</MudText>
         </NoRecordsContent>
@@ -38,12 +52,28 @@
 @code {
     private IEnumerable<PoliceStation> _stations = new List<PoliceStation>();
     private bool _loading = true;
-    private List<BreadcrumbItem> _breadcrumbs = new List<BreadcrumbItem>
+    private string _searchString = "";
+
+    private bool FilterFunc1(PoliceStation element) => FilterFunc(element, _searchString);
+
+    private bool FilterFunc(PoliceStation element, string searchString)
     {
-        new BreadcrumbItem("Dashboard", href: "/admin/dashboard"),
-        new BreadcrumbItem("Locations", href: null, disabled: true),
-        new BreadcrumbItem("Police Stations", href: null, disabled: true)
-    };
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.District?.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        if (element.District?.Division?.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        return false;
+    }
+    private List<BreadcrumbItem> _breadcrumbs = new List<BreadcrumbItem>
+{
+new BreadcrumbItem("Dashboard", href: "/admin/dashboard"),
+new BreadcrumbItem("Locations", href: null, disabled: true),
+new BreadcrumbItem("Police Stations", href: null, disabled: true)
+};
 
     protected override async Task OnInitializedAsync()
     {
@@ -71,7 +101,15 @@
 
     private async Task OpenEditDialog(PoliceStation station)
     {
-        var parameters = new DialogParameters { ["Model"] = new PoliceStation { Oid = station.Oid, Name = station.Name, DistrictId = station.DistrictId } };
+        var parameters = new DialogParameters
+            {
+                ["Model"] = new PoliceStation
+                {
+                    Oid = station.Oid,
+                    Name = station.Name,
+                    DistrictId = station.DistrictId
+                }
+            };
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         var dialog = DialogService.Show<PoliceStationDialog>("Edit Police Station", parameters, options);
         var result = await dialog.Result;
@@ -85,9 +123,9 @@
     private async Task DeleteStation(PoliceStation station)
     {
         bool? confirm = await DialogService.ShowMessageBox(
-            "Delete Station", 
-            $"Are you sure you want to delete {station.Name}?", 
-            yesText:"Delete", cancelText:"Cancel");
+        "Delete Station",
+        $"Are you sure you want to delete {station.Name}?",
+        yesText: "Delete", cancelText: "Cancel");
 
         if (confirm == true)
         {

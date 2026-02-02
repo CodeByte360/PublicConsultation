@@ -13,16 +13,21 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <div class="d-flex justify-space-between align-center mb-4">
         <MudText Typo="Typo.h5">User Management</MudText>
-        <div class="d-flex align-center">
+        <div class="d-flex align-center gap-4">
+            <MudTextField @bind-Value="_searchString" Placeholder="Search by Name, Email, Phone or NID"
+                Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 350px;" Immediate="true"
+                Clearable="true"></MudTextField>
             <MudSelect T="Guid?" Label="Filter by Role" Value="@_roleFilter" ValueChanged="OnRoleFilterChanged"
-                Variant="Variant.Outlined" Margin="Margin.Dense" Class="mr-4" Style="width: 250px;" Clearable="true">
+                Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 200px;" Clearable="true">
                 <MudSelectItem T="Guid?" Value="null">All Roles</MudSelectItem>
                 @foreach (var role in _roles)
                 {
                     <MudSelectItem T="Guid?" Value="@role.Oid">@role.Name</MudSelectItem>
                 }
             </MudSelect>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateUser">Create User</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                OnClick="CreateUser">Create User</MudButton>
         </div>
     </div>
 
@@ -94,10 +99,26 @@
     private List<Role> _roles = new List<Role>();
     private Guid? _roleFilter;
     private bool _loading = true;
+    private string _searchString = "";
 
-    private IEnumerable<UserAccount> FilteredUsers => _roleFilter == null
-    ? Users
-    : Users.Where(u => u.RoleId == _roleFilter);
+    private bool FilterFunc(UserAccount element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.FullNameEnglish?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+        if (element.Email.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.PhoneNumber.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.NIDNumber.ToString().Contains(searchString))
+            return true;
+        return false;
+    }
+
+    private IEnumerable<UserAccount> FilteredUsers => Users
+    .Where(u => _roleFilter == null || u.RoleId == _roleFilter)
+    .Where(u => FilterFunc(u, _searchString));
 
     protected override async Task OnInitializedAsync()
     {

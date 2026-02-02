@@ -39,8 +39,10 @@
                                 @context.User.Identity?.Name?.FirstOrDefault().ToString().ToUpper()
                             }
                         </MudAvatar>
-                        <MudText Class="ml-3 d-none d-md-block" Typo="Typo.body2"><b>@context.User.Identity?.Name</b>
-                        </MudText>
+                        <div class="ml-3 d-none d-md-flex flex-column align-start">
+                            <MudText Typo="Typo.body2" Style="line-height:1.2"><b>@(_currentUser?.FullNameEnglish ?? context.User.Identity?.Name)</b></MudText>
+                            <MudText Typo="Typo.caption" Style="opacity: 0.7; margin-top: -2px;">@context.User.Identity?.Name</MudText>
+                        </div>
                         <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Color="Color.Inherit" />
                     </ActivatorContent>
                     <ChildContent>

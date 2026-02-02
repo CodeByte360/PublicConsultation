@@ -17,14 +17,19 @@
     </div>
 
     <MudTable Items="@_divisions" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading" Elevation="25"
-        Class="rounded-lg">
+        Class="rounded-lg" Filter="new Func<Division,bool>(FilterFunc1)">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Division List</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Search by Name" Adornment="Adornment.Start"
+                AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" 
+                Immediate="true" Clearable="true"></MudTextField>
+        </ToolBarContent>
         <HeaderContent>
-            <MudTh>Oid</MudTh>
             <MudTh>Name</MudTh>
             <MudTh Style="text-align:right">Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Oid">@context.Oid</MudTd>
             <MudTd DataLabel="Name">@context.Name</MudTd>
             <MudTd DataLabel="Actions" Style="text-align:right">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info"
@@ -33,6 +38,9 @@
                     OnClick="@(() => DeleteDivision(context))" />
             </MudTd>
         </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
         <NoRecordsContent>
             <MudText>No divisions found.</MudText>
         </NoRecordsContent>
@@ -42,6 +50,18 @@
 @code {
     private IEnumerable<Division> _divisions = new List<Division>();
     private bool _loading = true;
+    private string _searchString = "";
+
+    private bool FilterFunc1(Division element) => FilterFunc(element, _searchString);
+
+    private bool FilterFunc(Division element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
     private List<BreadcrumbItem> _breadcrumbs = new List<BreadcrumbItem>
 {
 new BreadcrumbItem("Dashboard", href: "/admin/dashboard"),
