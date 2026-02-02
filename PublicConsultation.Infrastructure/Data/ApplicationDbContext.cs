@@ -23,4 +23,16 @@ public class ApplicationDbContext : DbContext
     public DbSet<Opinion> Opinions { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<Biometric> Biometrics { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<UserAccount>(entity =>
+        {
+            entity.HasIndex(u => u.Email).IsUnique();
+            entity.HasIndex(u => u.PhoneNumber).IsUnique();
+            entity.HasIndex(u => u.NIDNumber).IsUnique();
+        });
+    }
 }

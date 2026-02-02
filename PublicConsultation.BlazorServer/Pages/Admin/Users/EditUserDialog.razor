@@ -225,6 +225,23 @@
         {
             try
             {
+                // Uniqueness checks (excluding current user)
+                if (!await AuthService.IsEmailUniqueAsync(model.Email, model.Oid))
+                {
+                    Snackbar.Add("Email address is already in use by another user.", Severity.Error);
+                    return;
+                }
+                if (!await AuthService.IsPhoneUniqueAsync(model.PhoneNumber, model.Oid))
+                {
+                    Snackbar.Add("Phone number is already in use by another user.", Severity.Error);
+                    return;
+                }
+                if (!await AuthService.IsNidUniqueAsync(model.NIDNumber, model.Oid))
+                {
+                    Snackbar.Add("NID number is already in use by another user.", Severity.Error);
+                    return;
+                }
+
                 using var context = DbFactory.CreateDbContext();
                 var userToUpdate = await context.UserAccounts.FindAsync(model.Oid);
                 if (userToUpdate == null)

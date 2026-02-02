@@ -9,6 +9,7 @@
 @inject ISnackbar Snackbar
 @using PublicConsultation.Core.Interfaces
 @inject IFileService FileService
+@inject IAuthService AuthService
 @using PublicConsultation.BlazorServer.Pages.Components
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
@@ -164,6 +165,26 @@
         _isSaving = true;
         try
         {
+            // Uniqueness checks (excluding current user)
+            if (!await AuthService.IsEmailUniqueAsync(_user.Email, _user.Oid))
+            {
+                Snackbar.Add("Email address is already in use by another user.", Severity.Error);
+                _isSaving = false;
+                return;
+            }
+            if (!await AuthService.IsPhoneUniqueAsync(_user.PhoneNumber, _user.Oid))
+            {
+                Snackbar.Add("Phone number is already in use by another user.", Severity.Error);
+                _isSaving = false;
+                return;
+            }
+            if (!await AuthService.IsNidUniqueAsync(_user.NIDNumber, _user.Oid))
+            {
+                Snackbar.Add("NID number is already in use by another user.", Severity.Error);
+                _isSaving = false;
+                return;
+            }
+
             await DbContext.SaveChangesAsync();
             Snackbar.Add("Profile updated successfully!", Severity.Success);
             await Task.Delay(1000);

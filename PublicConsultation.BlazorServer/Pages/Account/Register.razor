@@ -162,7 +162,8 @@
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Registration Failed: {ex.Message}", Severity.Error);
+                // Uniqueness violations will be caught here
+                Snackbar.Add($"{ex.Message}", Severity.Error);
             }
         }
     }

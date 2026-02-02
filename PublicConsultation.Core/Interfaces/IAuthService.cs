@@ -10,5 +10,8 @@ public interface IAuthService
     string HashPassword(string password);
     bool VerifyPassword(string password, string hash);
     Task<bool> UserExistsAsync(string email);
+    Task<bool> IsEmailUniqueAsync(string email, Guid? excludeUserId = null);
+    Task<bool> IsPhoneUniqueAsync(string phone, Guid? excludeUserId = null);
+    Task<bool> IsNidUniqueAsync(long nid, Guid? excludeUserId = null);
     Task LogoutAsync();
 }

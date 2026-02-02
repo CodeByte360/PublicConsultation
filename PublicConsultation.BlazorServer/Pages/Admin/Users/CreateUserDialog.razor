@@ -212,6 +212,23 @@
         {
             try
             {
+                // Uniqueness checks
+                if (!await AuthService.IsEmailUniqueAsync(model.Email))
+                {
+                    Snackbar.Add("Email address is already in use.", Severity.Error);
+                    return;
+                }
+                if (!await AuthService.IsPhoneUniqueAsync(model.PhoneNumber))
+                {
+                    Snackbar.Add("Phone number is already in use.", Severity.Error);
+                    return;
+                }
+                if (!await AuthService.IsNidUniqueAsync(model.NIDNumber))
+                {
+                    Snackbar.Add("NID number is already in use.", Severity.Error);
+                    return;
+                }
+
                 model.IsVerified = true; // Admin created users are verified by default
                 var registeredUser = await AuthService.RegisterUserAsync(model, password, selectedRoleId);
 
@@ -234,7 +251,7 @@
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+                Snackbar.Add($"{ex.Message}", Severity.Error);
             }
         }
     }

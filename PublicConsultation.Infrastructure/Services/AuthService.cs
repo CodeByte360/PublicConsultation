@@ -43,6 +43,16 @@ public class AuthService : IAuthService
 
     public async Task<UserAccount> RegisterUserAsync(UserAccount user, string password, Guid? roleId = null)
     {
+        // Pre-validation for uniqueness
+        if (!await IsEmailUniqueAsync(user.Email))
+            throw new Exception("Email address is already in use.");
+
+        if (!await IsPhoneUniqueAsync(user.PhoneNumber))
+            throw new Exception("Phone number is already in use.");
+
+        if (!await IsNidUniqueAsync(user.NIDNumber))
+            throw new Exception("NID number is already in use.");
+
         user.PasswordHash = HashPassword(password);
 
         if (roleId.HasValue)
@@ -71,6 +81,21 @@ public class AuthService : IAuthService
     public async Task<bool> UserExistsAsync(string email)
     {
         return await _context.UserAccounts.AnyAsync(u => u.Email == email);
+    }
+
+    public async Task<bool> IsEmailUniqueAsync(string email, Guid? excludeUserId = null)
+    {
+        return !await _context.UserAccounts.AnyAsync(u => u.Email == email && u.Oid != excludeUserId);
+    }
+
+    public async Task<bool> IsPhoneUniqueAsync(string phone, Guid? excludeUserId = null)
+    {
+        return !await _context.UserAccounts.AnyAsync(u => u.PhoneNumber == phone && u.Oid != excludeUserId);
+    }
+
+    public async Task<bool> IsNidUniqueAsync(long nid, Guid? excludeUserId = null)
+    {
+        return !await _context.UserAccounts.AnyAsync(u => u.NIDNumber == nid && u.Oid != excludeUserId);
     }
 
     public Task LogoutAsync()
