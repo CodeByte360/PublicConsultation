@@ -93,12 +93,12 @@
                 <MudList T="string" Dense="true">
                     @foreach (var op in _recentOpinions)
                     {
-                        <MudListItem>
-                            <div class="d-flex flex-column">
-                                <MudText Typo="Typo.body2"><b>@op.User?.FullNameEnglish</b></MudText>
-                                <MudText Typo="Typo.caption" Class="text-truncate">@op.OpinionText</MudText>
-                            </div>
-                        </MudListItem>
+                            <MudListItem>
+                                <div class="d-flex flex-column">
+                                    <MudText Typo="Typo.body2"><b>@op.User?.FullNameEnglish</b></MudText>
+                                    <MudText Typo="Typo.caption" Class="text-truncate">@op.OpinionText</MudText>
+                                </div>
+                            </MudListItem>
                     }
                 </MudList>
             </MudPaper>
@@ -191,21 +191,20 @@
         _sentimentData[3] = allOpinions.Count(o => string.IsNullOrEmpty(o.Sentiment) || o.Sentiment.StartsWith("Neutral"));
 
         // Calculate Controversial Sections
+        // Calculate Controversial Sections
         _controversialSections = await DbContext.Opinions
-        .Include(o => o.Rule)
-        .ThenInclude(r => r.DraftDocument)
-        .GroupBy(o => o.RuleId)
-        .Select(g => new ControversialSection
-            {
-                DocId = g.First().Rule.DraftDocumentId,
-                SectionTitle = g.First().Rule.SectionTitle,
-                DocTitle = g.First().Rule.DraftDocument.Title,
-                TotalFeedback = g.Count(),
-                NegativeCount = g.Count(o => (o.Sentiment ?? "").StartsWith("Negative"))
-            })
-        .OrderByDescending(s => s.NegativeCount)
-        .Take(5)
-        .ToListAsync();
+            .GroupBy(o => new { o.RuleId, o.Rule.DraftDocumentId, o.Rule.SectionTitle, DocTitle = o.Rule.DraftDocument.Title })
+            .Select(g => new ControversialSection
+                {
+                    DocId = g.Key.DraftDocumentId,
+                    SectionTitle = g.Key.SectionTitle,
+                    DocTitle = g.Key.DocTitle,
+                    TotalFeedback = g.Count(),
+                    NegativeCount = g.Count(o => (o.Sentiment ?? "").StartsWith("Negative"))
+                })
+            .OrderByDescending(s => s.NegativeCount)
+            .Take(5)
+            .ToListAsync();
 
         _recentOpinions = await DbContext.Opinions
         .Include(o => o.User)

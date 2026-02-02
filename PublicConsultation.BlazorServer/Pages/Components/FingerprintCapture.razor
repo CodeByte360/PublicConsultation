@@ -48,7 +48,7 @@
         try
         {
             var result = await JSRuntime.InvokeAsync<SecuGenResult>("window.secugen.capture");
-            if (result.Success)
+            if (result.success)
             {
                 ImageData = result.image;
                 await OnCaptured.InvokeAsync(new FingerprintData { Image = result.image, Template = result.template });
@@ -80,7 +80,7 @@
 
     public class SecuGenResult
     {
-        public bool Success { get; set; }
+        public bool success { get; set; }
         public string? image { get; set; }
         public string? template { get; set; }
         public string? error { get; set; }
