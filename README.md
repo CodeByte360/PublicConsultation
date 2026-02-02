@@ -1,6 +1,6 @@
 # Digital Public Consultation System (DPCS)
 
-![Status](https://img.shields.io/badge/Status-Production--Ready-success) ![Stack](https://img.shields.io/badge/.NET-8.0-blue) ![AI](https://img.shields.io/badge/AI-ML.NET%20(Offline)-green)
+![Status](https://img.shields.io/badge/Status-Production--Ready-success) ![Stack](https://img.shields.io/badge/.NET-8.0-blue) ![Biometrics](https://img.shields.io/badge/Biometrics-SecuGen--Integrated-orange) ![AI](https://img.shields.io/badge/AI-ML.NET%20(Offline)-green)
 
 An end-to-end platform for Government Transparency, Legislative Consultation, and AI-Powered Public Sentiment Analysis.
 
@@ -14,12 +14,12 @@ An end-to-end platform for Government Transparency, Legislative Consultation, an
 5. [The Workflow](#-the-workflow)
 6. [Architecture & Folders](#-architecture--folders)
 7. [Getting Started](#-getting-started)
-8. [Important Technical Parts](#-important-technical-parts)
+8. [Management & Transparency](#-management--transparency)
 
 ---
 
 ## 🏛️ Project Overview
-The **Digital Public Consultation System (DPCS)** bridges the gap between the government and the public. It allows ministries to publish draft laws and receive structured, section-by-section feedback from citizens. Unlike traditional systems, DPCS uses **Local Machine Learning** to automatically categorize thousands of opinions, saving officials hundreds of hours of manual work.
+The **Digital Public Consultation System (DPCS)** bridges the gap between the government and the public. It allows ministries to publish draft laws and receive structured, section-by-section feedback from citizens. Unlike traditional systems, DPCS uses **Local Machine Learning** to automatically categorize thousands of opinions and **Biometric Verification** to ensure the authenticity of administrative users.
 
 ---
 
@@ -27,10 +27,11 @@ The **Digital Public Consultation System (DPCS)** bridges the gap between the go
 
 ### Admin & Officials (Strategic Power)
 - **Automatic Document Shredding**: Upload a PDF/DOCX; our parser intelligently converts "Rules" into interactive database objects.
-- **AI Sentiment Engine**: Instantly detect if the public mood is Positive, Negative, or Mixed.
+- **Biometric Security**: Integrated [SecuGen Fingerprint Support](wwwroot/js/secugen.js) for high-security official verification.
+- **AI Sentiment Engine**: Instantly detect if the public mood is Positive, Negative, or Mixed using local ML.NET.
 - **Thematic Tracking**: Identify critical issues like "Privacy," "Sanctions," or "Rights" without reading every comment.
+- **Advanced Management**: Comprehensive search and pagination across Users, Locations, and Documents.
 - **One-Click Comparative Reports**: Generate official reports for Cabinet review with formatted side-by-side legal text and AI summaries.
-- **Feedback Management**: A central command center to browse, search, and manage every opinion.
 
 ### Citizens (The Public Voice)
 - **Personalized Dashboards**: Track status of participated consultations.
@@ -41,10 +42,11 @@ The **Digital Public Consultation System (DPCS)** bridges the gap between the go
 ---
 
 ## 🧠 Key Features
+- **Biometric Fingerprint Integration**: Enterprise-grade verification using SecuGen PRO Series scanners via WebAPI.
 - **Deterministic AI**: Uses **ML.NET Binary Classification** (SDCA Regression) for high-speed, local sentiment analysis.
-- **Smart Summarization**: Extractive summarization picks the "Main Point" from massive feedback batches.
-- **Print Optimization**: Dedicated CSS for professional PDF/Print exports.
-- **Responsive Management**: Handles full PDF parsing and rule tracking with E-signature-ready structures.
+- **Blockchain-Lite Audit Log**: Every administrative action is recorded in an immutable chain with hash-based integrity verification.
+- **Data Integrity**: Enforced uniqueness constraints for NID, Phone, and Email to prevent identity fraud.
+- **Print Optimization**: Dedicated CSS for professional PDF/Print exports for Government records.
 
 ---
 
@@ -54,7 +56,8 @@ The **Digital Public Consultation System (DPCS)** bridges the gap between the go
 | :--- | :--- |
 | **Logic** | C# .NET 8.0 (Blazor Server) |
 | **UI Components** | [MudBlazor](https://mudblazor.com/) |
-| **Intelligence** | [Microsoft ML.NET](https://dotnet.microsoft.com/en-us/apps/machinelearning-ai/ml-dotnet) |
+| **Intelligence** | [Microsoft ML.NET](https://dotnet.microsoft.com/) |
+| **Biometrics** | [SecuGen WebAPI](https://secugen.com/) |
 | **Database** | SQL Server + Entity Framework Core |
 | **Email** | SMTP / Gmail Service |
 | **Layout** | Semantic HTML5 + Custom Vanilla CSS |
@@ -71,15 +74,16 @@ graph TD
     D --> E[Citizen Submits Opinions & Rewrites]
     E --> F[ML.NET Analyzes Sentiment/Themes]
     F --> G[Official Generates Comparative Report]
-    G --> H[Final Decision for Government Cabinet]
+    G --> H[Verification & Final Cabinet Decision]
+    H --> I[Audit Log Records All Outcomes]
 ```
 
 ---
 
 ## 📂 Architecture & Folders
-- **`PublicConsultation.Core`**: Domain entities (Rule, Opinion, User) and interface definitions.
-- **`PublicConsultation.Infrastructure`**: Implementation details (Db Context, AI Service, Email Service, Doc Parser).
-- **`PublicConsultation.BlazorServer`**: The UI layer (Components, Pages, Auth logic).
+- **`PublicConsultation.Core`**: Domain entities (Rule, Opinion, UserAccount) and interface definitions.
+- **`PublicConsultation.Infrastructure`**: Implementation details (Db Context, AI Service, Biometric Logic, Doc Parser).
+- **`PublicConsultation.BlazorServer`**: The UI layer (MudBlazor Components, Auth logic, JS Interop).
 
 ---
 
@@ -89,8 +93,8 @@ graph TD
    ```json
    "DefaultConnection": "Server=...;Database=PubliConDb;..."
    ```
-2. **Setup Email (SMTP)**:
-   Ensure `SmtpSettings` are populated to allow notification emails.
+2. **Setup Biometrics**:
+   Install **SecuGen WebAPI** (v2.0+) and ensure it's running on `https://localhost:8443`.
 3. **Database Migration**:
    ```bash
    dotnet ef database update
@@ -102,10 +106,28 @@ graph TD
 
 ---
 
-## 💎 Important Technical Parts
+## � Biometric Authentication Flow
 
-- **`AiAnalysisService.cs`**: The heart of the AI. It trains a local model at startup to ensure 100% privacy and no cost.
-- **`DocumentService.cs`**: Uses custom logic to parse complex legal headers and turn them into navigable sections.
-- **`ComparativeStatement.razor`**: The most critical page for officials—the aggregation of all legal and public data.
+To ensure high-trust administrative actions, DPCS integrates a hardware-accelerated biometric layer:
+
+### 1. Registration Phase
+- Officials capture 4 distinct fingerprints (**Left Thumb/Index**, **Right Thumb/Index**) during account setup.
+- Images are processed locally; only **ISO-19794-2 Standard Templates** are stored in the database for maximum privacy.
+
+### 2. Verification Phase
+- When an official performs a sensitive action (e.g., verifying a citizen's identity), the system triggers a **Live Capture**.
+- The captured template is compared against all 4 registered templates using the **SecuGen Matching Engine**.
+
+### 3. Logic & Security
+- **Match Score Threshold**: A score of **100+** is required for successful verification (configurable for higher security).
+- **Zero-Trust**: Fingerprint matching occurs on the local machine via JS Interop, ensuring the raw biometric data never leaves the secure environment during the comparison.
+
+---
+
+## �🛡️ Management & Transparency
+
+- **`AuditLogList.razor`**: The public-facing transparency portal. Uses hash verification to ensure log entries haven't been tampered with.
+- **`LocationSelector.razor`**: Intelligent location picker (Division > District > Police Station) used throughout the system.
+- **`UserList.razor`**: A high-performance management console with role-based filtering and instant search.
 
 ---
