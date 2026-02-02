@@ -17,22 +17,23 @@ public class UserAccount : BaseEntity
 
     [StringLength(15)]
     [Required(ErrorMessage = "PhoneNumber Is Required!")]
-    public string? PhoneNumber { get; set; }
+    public string PhoneNumber { get; set; } = string.Empty;
 
     [StringLength(100)]
-    public string? FullNameEnglish { get; set; }
+    [Required(ErrorMessage = "Full Name (English) Is Required!")]
+    public string? FullNameEnglish { get; set; } = string.Empty;
 
-    public string? FullNameBangla { get; set; }
+    public string? FullNameBangla { get; set; } = string.Empty;
 
-    [StringLength(17)]
+    [StringLength (20)]
     [Required(ErrorMessage = "NID Number Is Required!")]
-    public string? NIDNumber { get; set; }
+    public long NIDNumber { get; set; }
 
-    public string? Designation { get; set; }
+    public string? Designation { get; set; } = string.Empty;
 
-    public string? Address { get; set; }
+    public string? Address { get; set; } = string.Empty;
 
-    public string? ProfilePictureUrl { get; set; }
+    public string? ProfilePictureUrl { get; set; } = string.Empty;
     public bool IsVerified { get; set; }
     public bool IsActive { get; set; } = true;
 

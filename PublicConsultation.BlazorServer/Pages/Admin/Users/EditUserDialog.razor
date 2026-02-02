@@ -78,7 +78,7 @@
                 <MudItem xs="12"><MudDivider Class="my-2"/></MudItem>
 
                 <MudItem xs="12" sm="6">
-                    <MudTextField T="string" Label="Full Name (English)" @bind-Value="model.FullNameEnglish" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="string" Label="Full Name (English)" @bind-Value="model.FullNameEnglish" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" RequiredError="Full Name (English) is required!" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudTextField T="string" Label="Full Name (Bangla)" @bind-Value="model.FullNameBangla" Variant="Variant.Outlined" Margin="Margin.Dense" />
@@ -87,10 +87,11 @@
                     <MudTextField T="string" Label="Designation / Title" @bind-Value="model.Designation" Variant="Variant.Outlined" Margin="Margin.Dense" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudTextField T="string" Label="Mobile Number" @bind-Value="model.PhoneNumber" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="string" Label="Mobile Number" @bind-Value="model.PhoneNumber" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" RequiredError="Mobile Number is required!" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudTextField T="string" Label="NID Number" @bind-Value="model.NIDNumber" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    <MudTextField T="long" Label="NID Number" @bind-Value="model.NIDNumber" Variant="Variant.Outlined" Margin="Margin.Dense" Required="true" RequiredError="NID Number is required!" 
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge" />
                 </MudItem>
 
                 <MudItem xs="12">

@@ -1,10 +1,9 @@
 @page "/register"
 @using PublicConsultation.Core.Entities
 @using PublicConsultation.Core.Interfaces
-@inject IAuthService AuthService
-@inject NavigationManager NavigationManager
-@using PublicConsultation.Core.Entities
-@using PublicConsultation.Core.Interfaces
+@using PublicConsultation.BlazorServer.Pages.Components
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
 @using System.IO
 @using Microsoft.AspNetCore.Components.Forms
 @inject IFileService FileService
@@ -75,16 +74,18 @@
                     </MudItem>
 
                     <MudItem xs="12" sm="6">
-                        <MudTextField T="string" Label="Full Name (English)" @bind-Value="registerModel.FullNameEnglish" Variant="Variant.Outlined"/>
+                        <MudTextField T="string" Label="Full Name (English)" @bind-Value="registerModel.FullNameEnglish" Variant="Variant.Outlined" Required="true" RequiredError="Full Name (English) is required!"/>
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <MudTextField T="string" Label="Full Name (Bangla)" @bind-Value="registerModel.FullNameBangla" Variant="Variant.Outlined"/>
                     </MudItem>
                     <MudItem xs="12" sm="6">
-                        <MudTextField T="string" Label="Mobile Number" @bind-Value="registerModel.PhoneNumber" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Phone"/>
+                        <MudTextField T="string" Label="Mobile Number" @bind-Value="registerModel.PhoneNumber" Variant="Variant.Outlined" 
+                                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Phone" Required="true" RequiredError="Mobile Number is required!"/>
                     </MudItem>
                      <MudItem xs="12" sm="6">
-                        <MudTextField T="string" Label="NID Number" @bind-Value="registerModel.NIDNumber" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge"/>
+                        <MudTextField T="long" Label="NID Number" @bind-Value="registerModel.NIDNumber" Variant="Variant.Outlined" 
+                                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge" Required="true" RequiredError="NID Number is required!"/>
                     </MudItem>
                     <MudItem xs="12">
                         <MudTextField T="string" Label="Designation/Occupation" @bind-Value="registerModel.Designation" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Work"/>

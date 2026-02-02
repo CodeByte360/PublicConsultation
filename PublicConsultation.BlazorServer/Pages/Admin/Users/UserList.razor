@@ -13,11 +13,21 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
     <div class="d-flex justify-space-between align-center mb-4">
         <MudText Typo="Typo.h5">User Management</MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateUser">Create User</MudButton>
+        <div class="d-flex align-center">
+            <MudSelect T="Guid?" Label="Filter by Role" Value="@_roleFilter" ValueChanged="OnRoleFilterChanged"
+                Variant="Variant.Outlined" Margin="Margin.Dense" Class="mr-4" Style="width: 250px;" Clearable="true">
+                <MudSelectItem T="Guid?" Value="null">All Roles</MudSelectItem>
+                @foreach (var role in _roles)
+                {
+                    <MudSelectItem T="Guid?" Value="@role.Oid">@role.Name</MudSelectItem>
+                }
+            </MudSelect>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateUser">Create User</MudButton>
+        </div>
     </div>
 
-    <MudTable Items="@Users" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading"
-        LoadingProgressColor="Color.Info">
+    <MudTable Items="@FilteredUsers" Hover="true" Breakpoint="Breakpoint.Sm" Loading="@_loading"
+        LoadingProgressColor="Color.Info" RowsPerPage="10">
         <HeaderContent>
             <MudTh>Avatar</MudTh>
             <MudTh>Email</MudTh>
@@ -73,16 +83,37 @@
                     OnClick="@(() => EditUser(context))" />
             </MudTd>
         </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{10, 25, 50, 100}" />
+        </PagerContent>
     </MudTable>
 </MudContainer>
 
 @code {
     private List<UserAccount> Users = new List<UserAccount>();
+    private List<Role> _roles = new List<Role>();
+    private Guid? _roleFilter;
     private bool _loading = true;
+
+    private IEnumerable<UserAccount> FilteredUsers => _roleFilter == null
+    ? Users
+    : Users.Where(u => u.RoleId == _roleFilter);
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadInitialData();
+    }
+
+    private async Task LoadInitialData()
+    {
+        _roles = await DbContext.Roles.OrderBy(r => r.Name).AsNoTracking().ToListAsync();
         await LoadUsers();
+    }
+
+    private async Task OnRoleFilterChanged(Guid? roleId)
+    {
+        _roleFilter = roleId;
+        StateHasChanged();
     }
 
     private async Task LoadUsers()

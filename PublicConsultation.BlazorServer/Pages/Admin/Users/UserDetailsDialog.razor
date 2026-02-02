@@ -50,7 +50,7 @@
                     <MudText Typo="Typo.body1" Class="mb-4">@(User.PhoneNumber ?? "Not Provided")</MudText>
 
                     <MudText Typo="Typo.caption" Color="Color.Secondary">NID Number</MudText>
-                    <MudText Typo="Typo.body1" Class="mb-4">@(User.NIDNumber ?? "Not Provided")</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-4">@(User.NIDNumber != 0 ? User.NIDNumber.ToString() : "Not Provided")</MudText>
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">Designation</MudText>
