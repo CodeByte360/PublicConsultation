@@ -1,11 +1,14 @@
 @using PublicConsultation.Core.Entities
 @using PublicConsultation.Core.Interfaces
+@using PublicConsultation.Core.DTOs
 @using PublicConsultation.Infrastructure.Data
 @using Microsoft.EntityFrameworkCore
 @using System.IO
 @using Microsoft.AspNetCore.Components.Forms
 @inject IFileService FileService
 @inject IAuthService AuthService
+@inject IEmailService EmailService
+@inject IOtpService OtpService
 @inject ISnackbar Snackbar
 @using PublicConsultation.BlazorServer.Pages.Components
 @inject IBiometricService BiometricService
@@ -56,15 +59,45 @@
                         <MudItem xs="12" sm="6">
                             <MudTextField T="string" Label="Email Address" Required="true" InputType="InputType.Email"
                             @bind-Value="model.Email" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" />
+                                Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
+                                Disabled="@isEmailVerified" />
                         </MudItem>
+
+                        <MudItem xs="12" sm="6" Class="d-flex align-center">
+                            @if (!isEmailVerified)
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="SendOtp"
+                                    Disabled="@(string.IsNullOrEmpty(model.Email) || isOtpSent)" Class="mr-2"
+                                    Size="Size.Small">
+                                    @(isOtpSent ? "OTP Sent" : "Send OTP")
+                                </MudButton>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle"
+                                    Size="Size.Small">Verified</MudChip>
+                            }
+                        </MudItem>
+
+                        @if (isOtpSent && !isEmailVerified)
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudTextField T="string" Label="Enter OTP" @bind-Value="otpInput" Variant="Variant.Outlined"
+                                    Margin="Margin.Dense" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6" Class="d-flex align-center">
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="VerifyOtp"
+                                    Size="Size.Small">Verify OTP</MudButton>
+                            </MudItem>
+                        }
+
                         <MudItem xs="12" sm="6">
                             <MudTextField T="string" Label="Password" Required="true" InputType="InputType.Password"
-                            @bind-Value="password" Variant="Variant.Outlined" Margin="Margin.Dense"
+                            @bind-Value="model.Password" Variant="Variant.Outlined" Margin="Margin.Dense"
                                 Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" />
                         </MudItem>
                         <MudItem xs="12" sm="6">
-                            <MudSelect T="Guid" Label="Assign Role" Required="true" @bind-Value="selectedRoleId"
+                            <MudSelect T="Guid" Label="Assign Role" Required="true" @bind-Value="model.RoleId"
                                 Variant="Variant.Outlined" Margin="Margin.Dense" AnchorOrigin="Origin.BottomCenter"
                                 Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Security">
                                 @foreach (var role in Roles)
@@ -151,8 +184,8 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text" Class="px-6">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success)"
-            StartIcon="@Icons.Material.Filled.PersonAdd" Class="px-8">
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit"
+            Disabled="@(!success || !isEmailVerified)" StartIcon="@Icons.Material.Filled.PersonAdd" Class="px-8">
             Create Account
         </MudButton>
     </DialogActions>
@@ -163,14 +196,16 @@
 
     MudForm form;
     bool success;
-    UserAccount model = new UserAccount();
-    string password;
-    Guid selectedRoleId;
+    CreateUserRequest model = new CreateUserRequest();
     List<Role> Roles = new List<Role>();
 
     string? leftThumbTemplate, leftIndexTemplate, rightThumbTemplate, rightIndexTemplate;
     string? leftThumbImage, leftIndexImage, rightThumbImage, rightIndexImage;
 
+    // OTP State
+    bool isOtpSent = false;
+    bool isEmailVerified = false;
+    string otpInput = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -178,7 +213,7 @@
         Roles = await context.Roles.AsNoTracking().ToListAsync();
         // Default to Citizen if available
         var citizen = Roles.FirstOrDefault(r => r.Name == "Citizen");
-        if (citizen != null) selectedRoleId = citizen.Oid;
+        if (citizen != null) model.RoleId = citizen.Oid;
     }
 
     private void Cancel() => MudDialog.Cancel();
@@ -205,10 +240,48 @@
         }
     }
 
+    private async Task SendOtp()
+    {
+        if (string.IsNullOrEmpty(model.Email))
+        {
+            Snackbar.Add("Please enter an email address.", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var otp = await OtpService.GenerateOtpAsync(model.Email);
+            await EmailService.SendEmailAsync(model.Email, "Public Consultation - Email Verification",
+            $"Your OTP for registration is: <b>{otp}</b>. It expires in 5 minutes.");
+
+            isOtpSent = true;
+            Snackbar.Add("OTP sent to email.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to send OTP: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task VerifyOtp()
+    {
+        var isValid = await OtpService.ValidateOtpAsync(model.Email, otpInput);
+        if (isValid)
+        {
+            isEmailVerified = true;
+            isOtpSent = false;
+            Snackbar.Add("Email verified successfully!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Invalid or expired OTP.", Severity.Error);
+        }
+    }
+
     private async Task Submit()
     {
         await form.Validate();
-        if (form.IsValid)
+        if (form.IsValid && isEmailVerified)
         {
             try
             {
@@ -229,8 +302,23 @@
                     return;
                 }
 
-                model.IsVerified = true; // Admin created users are verified by default
-                var registeredUser = await AuthService.RegisterUserAsync(model, password, selectedRoleId);
+                // Map DTO to Entity
+                var user = new UserAccount
+                    {
+                        Email = model.Email,
+                        FullNameEnglish = model.FullNameEnglish,
+                        FullNameBangla = model.FullNameBangla,
+                        PhoneNumber = model.PhoneNumber,
+                        NIDNumber = model.NIDNumber,
+                        Designation = model.Designation,
+                        Address = model.Address,
+                        PoliceStationId = model.PoliceStationId,
+                        ProfilePictureUrl = model.ProfilePictureUrl,
+                        IsVerified = true,
+                        IsActive = true
+                    };
+
+                var registeredUser = await AuthService.RegisterUserAsync(user, model.Password, model.RoleId);
 
                 if (registeredUser != null && (!string.IsNullOrEmpty(leftThumbTemplate) || !string.IsNullOrEmpty(leftIndexTemplate) ||
                 !string.IsNullOrEmpty(rightThumbTemplate) || !string.IsNullOrEmpty(rightIndexTemplate)))

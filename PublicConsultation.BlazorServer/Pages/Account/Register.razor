@@ -1,6 +1,7 @@
 @page "/register"
 @using PublicConsultation.Core.Entities
 @using PublicConsultation.Core.Interfaces
+@using PublicConsultation.Core.DTOs
 @using PublicConsultation.BlazorServer.Pages.Components
 @using PublicConsultation.Infrastructure.Data
 @using Microsoft.EntityFrameworkCore
@@ -8,6 +9,8 @@
 @using Microsoft.AspNetCore.Components.Forms
 @inject IFileService FileService
 @inject IAuthService AuthService
+@inject IEmailService EmailService
+@inject IOtpService OtpService
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
 
@@ -54,16 +57,40 @@
 
                     <MudItem xs="12" sm="6">
                         <MudTextField T="string" Label="Email" Required="true" RequiredError="Email is required!"
-                                      @bind-Value="registerModel.Email" InputType="InputType.Email" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"/>
+                                      @bind-Value="registerModel.Email" InputType="InputType.Email" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
+                                      Disabled="@isEmailVerified" />
                     </MudItem>
                     
+                     <MudItem xs="12" sm="6" Class="d-flex align-center">
+                         @if (!isEmailVerified)
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="SendOtp" Disabled="@(string.IsNullOrEmpty(registerModel.Email) || isOtpSent)" Class="mr-2">
+                                @(isOtpSent ? "OTP Sent" : "Send OTP")
+                            </MudButton>
+                        }
+                        else
+                        {
+                             <MudChip T="string" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">Verified</MudChip>
+                        }
+                    </MudItem>
+
+                     @if (isOtpSent && !isEmailVerified)
+                    {
+                        <MudItem xs="12" sm="6">
+                            <MudTextField T="string" Label="Enter OTP" @bind-Value="otpInput" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" Class="d-flex align-center">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="VerifyOtp">Verify OTP</MudButton>
+                        </MudItem>
+                    }
+
                     <MudItem xs="12" sm="6">
                         <MudTextField T="string" Label="Password" Required="true" RequiredError="Password is required!"
-                                      @bind-Value="password" InputType="InputType.Password" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"/>
+                                      @bind-Value="registerModel.Password" InputType="InputType.Password" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"/>
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <MudTextField T="string" Label="Confirm Password" Required="true"
-                                      RequiredError="Password Confirmation is required!" @bind-Value="confirmPassword"
+                                      RequiredError="Password Confirmation is required!" @bind-Value="registerModel.ConfirmPassword"
                                       InputType="InputType.Password" Validation="@(new Func<string, IEnumerable<string>>(PasswordMatch))" 
                                       Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.LockReset"/>
                     </MudItem>
@@ -104,7 +131,7 @@
 
                     <MudItem xs="12" Class="d-flex justify-center mt-4">
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Elevation="2" OnClick="Submit" Size="Size.Large"
-                                   FullWidth="true" Disabled="@(!success)" Class="py-2">Register</MudButton>
+                                   FullWidth="true" Disabled="@(!success || !isEmailVerified)" Class="py-2">Register</MudButton>
                     </MudItem>
                 </MudGrid>
             </MudForm>
@@ -122,13 +149,16 @@
     bool success;
     string[] errors = { };
 
-    UserAccount registerModel = new UserAccount();
-    string password;
-    string confirmPassword;
+    RegisterRequest registerModel = new RegisterRequest();
+    
+    // OTP State
+    bool isOtpSent = false;
+    bool isEmailVerified = false;
+    string otpInput = "";
 
     private IEnumerable<string> PasswordMatch(string arg)
     {
-        if (password != arg)
+        if (registerModel.Password != arg)
             yield return "Passwords don't match";
     }
 
@@ -153,15 +183,72 @@
         }
     }
 
+    private async Task SendOtp()
+    {
+        if (string.IsNullOrEmpty(registerModel.Email))
+        {
+            Snackbar.Add("Please enter an email address.", Severity.Warning);
+            return;
+        }
+        
+        // Simple regex check or let MudForm validate first? 
+        // We'll trust the user to enter a valid-ish email for OTP
+        
+        try
+        {
+            var otp = await OtpService.GenerateOtpAsync(registerModel.Email);
+            await EmailService.SendEmailAsync(registerModel.Email, "Public Consultation - Email Verification", 
+                $"Your OTP for registration is: <b>{otp}</b>. It expires in 5 minutes.");
+            
+            isOtpSent = true;
+            Snackbar.Add("OTP sent to your email.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+             Snackbar.Add($"Failed to send OTP: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task VerifyOtp()
+    {
+        var isValid = await OtpService.ValidateOtpAsync(registerModel.Email, otpInput);
+        if (isValid)
+        {
+            isEmailVerified = true;
+            isOtpSent = false; // Hide OTP input
+            Snackbar.Add("Email verified successfully!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Invalid or expired OTP.", Severity.Error);
+        }
+    }
+
     private async Task Submit()
     {
         await form.Validate();
-        if (form.IsValid)
+        if (form.IsValid && isEmailVerified)
         {
             try
             {
+                // Map DTO to Entity
+                var user = new UserAccount
+                {
+                    Email = registerModel.Email,
+                    FullNameEnglish = registerModel.FullNameEnglish,
+                    FullNameBangla = registerModel.FullNameBangla,
+                    PhoneNumber = registerModel.PhoneNumber,
+                    NIDNumber = registerModel.NIDNumber,
+                    Designation = registerModel.Designation,
+                    Address = registerModel.Address,
+                    PoliceStationId = registerModel.PoliceStationId,
+                    ProfilePictureUrl = registerModel.ProfilePictureUrl,
+                    IsVerified = true, // Email verified via OTP
+                    IsActive = true
+                };
+
                 // In a real scenario you would verify uniqueness first or handle exception
-                var user = await AuthService.RegisterUserAsync(registerModel, password);
+                await AuthService.RegisterUserAsync(user, registerModel.Password);
                 Snackbar.Add("Registration Successful!", Severity.Success);
                 NavigationManager.NavigateTo("/login");
             }
