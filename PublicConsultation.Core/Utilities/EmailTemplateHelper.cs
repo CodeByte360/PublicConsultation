@@ -1,12 +1,16 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace PublicConsultation.Infrastructure.Services;
-
-public static class EmailTemplateHelper
+namespace PublicConsultation.Core.Utilities
 {
-    public static string GetConsultationNotificationHtml(string title, string ministry, string description, string viewAllUrl, string viewDocUrl)
+    public static class EmailTemplateHelper
     {
-        return $@"
+        public static string GetConsultationNotificationHtml(string title, string ministry, string description, string viewAllUrl, string viewDocUrl)
+        {
+            return $@"
 <!DOCTYPE html>
 <html>
 <head>
@@ -116,5 +120,6 @@ public static class EmailTemplateHelper
     </div>
 </body>
 </html>";
+        }
     }
 }

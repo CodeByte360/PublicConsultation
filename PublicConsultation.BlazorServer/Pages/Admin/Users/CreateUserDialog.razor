@@ -10,6 +10,7 @@
 @inject IEmailService EmailService
 @inject IOtpService OtpService
 @inject ISnackbar Snackbar
+@using PublicConsultation.Core.Utilities
 @using PublicConsultation.BlazorServer.Pages.Components
 @inject IBiometricService BiometricService
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
@@ -251,8 +252,8 @@
         try
         {
             var otp = await OtpService.GenerateOtpAsync(model.Email);
-            await EmailService.SendEmailAsync(model.Email, "Public Consultation - Email Verification",
-            $"Your OTP for registration is: <b>{otp}</b>. It expires in 5 minutes.");
+            var emailBody = EmailTemplates.GetOtpEmail(otp, 5);
+            await EmailService.SendEmailAsync(model.Email, "Public Consultation - Email Verification", emailBody);
 
             isOtpSent = true;
             Snackbar.Add("OTP sent to email.", Severity.Success);

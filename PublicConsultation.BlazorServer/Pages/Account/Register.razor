@@ -13,6 +13,7 @@
 @inject IOtpService OtpService
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
+@using PublicConsultation.Core.Utilities
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="d-flex align-center justify-center mud-width-full" Style="min-height: 90vh;">
     <MudCard Elevation="25" Class="pa-8 my-8" Style="width: 100%; border-radius: 12px;">
@@ -197,8 +198,8 @@
         try
         {
             var otp = await OtpService.GenerateOtpAsync(registerModel.Email);
-            await EmailService.SendEmailAsync(registerModel.Email, "Public Consultation - Email Verification", 
-                $"Your OTP for registration is: <b>{otp}</b>. It expires in 5 minutes.");
+            var emailBody = EmailTemplates.GetOtpEmail(otp, 5);
+            await EmailService.SendEmailAsync(registerModel.Email, "Public Consultation - Email Verification", emailBody);
             
             isOtpSent = true;
             Snackbar.Add("OTP sent to your email.", Severity.Success);
@@ -243,7 +244,7 @@
                     Address = registerModel.Address,
                     PoliceStationId = registerModel.PoliceStationId,
                     ProfilePictureUrl = registerModel.ProfilePictureUrl,
-                    IsVerified = true, // Email verified via OTP
+                    IsVerified = false, // Email verified via OTP, but account verification is manual by Admin
                     IsActive = true
                 };
 
