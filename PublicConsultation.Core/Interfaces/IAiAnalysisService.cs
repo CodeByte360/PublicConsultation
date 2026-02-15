@@ -6,6 +6,7 @@ public interface IAiAnalysisService
 {
     Task<string> SummarizeOpinionsAsync(List<Opinion> opinions);
     Task<string> AnalyzeSentimentAsync(string text);
+    Task<string> SummarizeOpinionAsync(string text);
     Task<AnalysisResultDto> AnalyzeBatchAsync(List<Opinion> opinions);
     Task<string> AnswerQuestionAsync(Guid documentId, string question);
 }

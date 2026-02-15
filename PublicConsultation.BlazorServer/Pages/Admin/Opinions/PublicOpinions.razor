@@ -135,6 +135,12 @@
             </MudTd>
             <MudTd DataLabel="Opinion">
                 <MudText Typo="Typo.body2">@context.OpinionText</MudText>
+                @if (!string.IsNullOrEmpty(context.Summary))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Primary" Class="d-block mt-1">
+                        <b>AI Summary:</b> @context.Summary
+                    </MudText>
+                }
                 @if (!string.IsNullOrEmpty(context.Suggestion))
                 {
                     <MudAlert Severity="Severity.Success" Dense="true" Class="mt-1 py-0 px-2" NoIcon="true">
@@ -188,15 +194,22 @@
 
         _opinions = await query.OrderByDescending(o => o.CreatedDate).ToListAsync();
 
-        // Backfill sentiment for opinions that lack it
+        // Backfill sentiment and summary for opinions that lack it
         bool needsSave = false;
         foreach (var op in _opinions)
         {
+            bool updated = false;
             if (string.IsNullOrEmpty(op.Sentiment) || op.Sentiment == "Neutral")
             {
                 op.Sentiment = await AiService.AnalyzeSentimentAsync(op.OpinionText);
-                needsSave = true;
+                updated = true;
             }
+            if (string.IsNullOrEmpty(op.Summary))
+            {
+                op.Summary = await AiService.SummarizeOpinionAsync(op.OpinionText);
+                updated = true;
+            }
+            if (updated) needsSave = true;
         }
         if (needsSave)
         {
@@ -280,6 +293,7 @@ CountSentiment("Neutral")
         foreach (var op in _filteredOpinions.ToList())
         {
             op.Sentiment = await AiService.AnalyzeSentimentAsync(op.OpinionText);
+            op.Summary = await AiService.SummarizeOpinionAsync(op.OpinionText);
             count++;
             StateHasChanged(); // Animate progress
             await Task.Delay(50); // Small delay to not freeze UI

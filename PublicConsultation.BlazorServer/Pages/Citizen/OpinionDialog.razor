@@ -156,8 +156,9 @@
                 model.UserId = UserId;
                 model.CreatedDate = DateTime.UtcNow;
 
-                // Analyze sentiment before saving
+                // Analyze sentiment and generate summary before saving
                 model.Sentiment = await AiService.AnalyzeSentimentAsync(model.OpinionText);
+                model.Summary = await AiService.SummarizeOpinionAsync(model.OpinionText);
 
                 DbContext.Opinions.Add(model);
                 await DbContext.SaveChangesAsync();

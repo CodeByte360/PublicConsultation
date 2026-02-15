@@ -39,7 +39,7 @@ public class AiAnalysisService : IAiAnalysisService
         var texts = opinions.Select(o => o.OpinionText ?? string.Empty).ToList();
         List<string> sentiments = new List<string>();
 
-        try 
+        try
         {
             var response = await _httpClient.PostAsJsonAsync("analyze_batch", new { texts = texts });
             if (response.IsSuccessStatusCode)
@@ -53,8 +53,8 @@ public class AiAnalysisService : IAiAnalysisService
         }
         catch (Exception ex)
         {
-             // Fallback if AI service is down
-             sentiments = texts.Select(t => "Neutral").ToList();
+            // Fallback if AI service is down
+            sentiments = texts.Select(t => "Neutral").ToList();
         }
 
         if (!sentiments.Any()) sentiments = texts.Select(t => "Neutral").ToList();
@@ -108,6 +108,30 @@ public class AiAnalysisService : IAiAnalysisService
         return "Neutral";
     }
 
+    public async Task<string> SummarizeOpinionAsync(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("summarize", new { text = text });
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<SummarizeResultDto>();
+                if (result != null)
+                {
+                    return result.Summary;
+                }
+            }
+        }
+        catch
+        {
+            // Fallback to substring
+            return text.Length > 200 ? text.Substring(0, 197) + "..." : text;
+        }
+        return text;
+    }
+
     private List<string> DetectThemes(string text)
     {
         var themes = new List<string>();
@@ -152,7 +176,7 @@ public class AiAnalysisService : IAiAnalysisService
                                 .ToList();
 
         if (!sentences.Any()) return Task.FromResult("Feedback is too brief for significant analysis.");
-        
+
         // Return first 2 sentences as a dumb summary for now, relying on Python for advanced stuff in future
         return Task.FromResult(string.Join(". ", sentences.Take(2)) + ".");
     }
@@ -178,11 +202,12 @@ public class AiAnalysisService : IAiAnalysisService
     }
 
     // DTOs for Python API
-    private class SentimentResultDto 
-    { 
-        public string Sentiment { get; set; } = string.Empty; 
+    private class SentimentResultDto
+    {
+        public string Sentiment { get; set; } = string.Empty;
         public double Probability { get; set; }
     }
     private class BatchResultDto { public List<BatchItemDto> Results { get; set; } = new(); }
     private class BatchItemDto { public string Text { get; set; } = string.Empty; public string Sentiment { get; set; } = string.Empty; }
+    private class SummarizeResultDto { public string Summary { get; set; } = string.Empty; }
 }

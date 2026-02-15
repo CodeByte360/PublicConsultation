@@ -2,9 +2,19 @@ from flask import Flask, request, jsonify
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lsa import LsaSummarizer
+import nltk
 
 app = Flask(__name__)
 analyzer = SentimentIntensityAnalyzer()
+
+# Initialize sumy resources (extractive summarization)
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
 
 def get_professional_score(text):
     # VADER analysis
@@ -39,6 +49,28 @@ def analyze_sentiment():
         'sentiment': sentiment,
         'probability': float(prob)
     })
+
+@app.route('/summarize', methods=['POST'])
+def summarize():
+    content = request.json
+    text = content.get('text', '')
+    
+    if not text or len(text) < 20:
+        return jsonify({'summary': text})
+    
+    try:
+        parser = PlaintextParser.from_string(text, Tokenizer("english"))
+        summarizer = LsaSummarizer()
+        # Summarize to 1-2 most significant sentences
+        summary_sentences = summarizer(parser.document, 2)
+        summary = " ".join([str(sentence) for sentence in summary_sentences])
+        
+        if not summary:
+            summary = text[:200] + "..." if len(text) > 200 else text
+            
+        return jsonify({'summary': summary})
+    except Exception as e:
+        return jsonify({'summary': text[:200] + "...", 'error': str(e)})
 
 @app.route('/analyze_batch', methods=['POST'])
 def analyze_batch():
