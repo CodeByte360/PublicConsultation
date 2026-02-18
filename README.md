@@ -130,13 +130,13 @@ To ensure high-trust administrative actions, DPCS integrates a hardware-accelera
 - **`LocationSelector.razor`**: Intelligent location picker (Division > District > Police Station) used throughout the system.
 - **`UserList.razor`**: A high-performance management console with role-based filtering and instant search.
 ## AI Package...
-- **` pip install sumy nltk vaderSentiment scikit-learn flask numpy'**
-- **` pip install flask '**
-- **` pip install vaderSentiment '**
-- **` pip install scikit-learn '**
-- **`  pip install numpy '**
-- **`  pip install sumy '**
-- **`  pip install nltk '**
+- **` pip install sumy nltk vaderSentiment scikit-learn flask numpy `**
+- **` pip install flask `**
+- **` pip install vaderSentiment `**
+- **` pip install scikit-learn `**
+- **`  pip install numpy `**
+- **`  pip install sumy `**
+- **`  pip install nltk `**
 
 
 ---
