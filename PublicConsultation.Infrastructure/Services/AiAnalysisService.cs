@@ -38,6 +38,8 @@ public class AiAnalysisService : IAiAnalysisService
         // Call Python API for sentiment
         var texts = opinions.Select(o => o.OpinionText ?? string.Empty).ToList();
         List<string> sentiments = new List<string>();
+        List<string> apiThemes = new List<string>();
+        bool sensitivityAlert = false;
 
         try
         {
@@ -48,10 +50,12 @@ public class AiAnalysisService : IAiAnalysisService
                 if (result != null)
                 {
                     sentiments = result.Results.Select(r => r.Sentiment).ToList();
+                    apiThemes = result.ExtractedThemes ?? new List<string>();
+                    sensitivityAlert = result.SensitivityAlert;
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Fallback if AI service is down
             sentiments = texts.Select(t => "Neutral").ToList();
@@ -70,16 +74,17 @@ public class AiAnalysisService : IAiAnalysisService
 
         double consensusScore = total > 0 ? (double)positive / total : 0;
 
-        // Use null-safe text aggregation
+        // Combine local rule-based themes with AI-extracted themes
         var allText = string.Join(" ", opinions.Select(o => (o.OpinionText ?? string.Empty).ToLower()));
-        var themes = DetectThemes(allText);
+        var localThemes = DetectThemes(allText);
+        var combinedThemes = localThemes.Union(apiThemes).Distinct().Take(5).ToList();
 
         return new AnalysisResultDto
         {
             Summary = await SummarizeOpinionsAsync(opinions),
             Sentiment = finalSentiment,
-            KeyThemes = themes,
-            Recommendation = GenerateRecommendation(finalSentiment, themes),
+            KeyThemes = combinedThemes,
+            Recommendation = GenerateRecommendation(finalSentiment, combinedThemes, sensitivityAlert),
             ConsensusScore = consensusScore
         };
     }
@@ -156,29 +161,51 @@ public class AiAnalysisService : IAiAnalysisService
         return themes.Take(5).ToList();
     }
 
-    private string GenerateRecommendation(string sentiment, List<string> themes)
+    private string GenerateRecommendation(string sentiment, List<string> themes, bool sensitivityAlert)
     {
+        if (sensitivityAlert) return "High Risk Alert: Strong negative sentiment detected. Immediate review of " + (themes.Any() ? themes.First() : "key issues") + " is required.";
         if (sentiment == "Negative") return "Critical Revision Required: Re-evaluate penalties and consult on " + (themes.Any() ? themes.First() : "major provisions") + ".";
         if (sentiment == "Mixed") return "Refinement Suggested: Clarify definitions and address concerns regarding " + string.Join(" and ", themes.Take(2)) + ".";
         if (sentiment == "Positive" && themes.Any()) return "Proceed with minor adjustments to ensure " + themes.First() + " is fully protected.";
         return "Proceed with current draft: High public consensus observed.";
     }
 
-    public Task<string> SummarizeOpinionsAsync(List<Opinion> opinions)
+    public async Task<string> SummarizeOpinionsAsync(List<Opinion> opinions)
     {
-        // Simple frequency-based extractive summary (kept in C# for speed/simplicity or could move to Python too)
-        if (opinions == null || !opinions.Any()) return Task.FromResult("No feedback provided.");
+        if (opinions == null || !opinions.Any()) return "No feedback provided.";
 
+        // Aggregate text
         var allText = string.Join(" ", opinions.Select(o => $"{o.OpinionText} {o.Suggestion ?? ""}"));
+
+        if (string.IsNullOrWhiteSpace(allText)) return "No content to summarize.";
+
+        try
+        {
+            // Try Python AI Summarization first
+            var response = await _httpClient.PostAsJsonAsync("summarize", new { text = allText });
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<SummarizeResultDto>();
+                if (result != null && !string.IsNullOrWhiteSpace(result.Summary))
+                {
+                    return result.Summary;
+                }
+            }
+        }
+        catch
+        {
+            // Fallthrough to manual if service fails
+        }
+
+        // Fallback: Simple frequency-based extractive summary
         var sentences = allText.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries)
                                 .Select(s => s.Trim())
                                 .Where(s => s.Length > 10)
                                 .ToList();
 
-        if (!sentences.Any()) return Task.FromResult("Feedback is too brief for significant analysis.");
+        if (!sentences.Any()) return "Feedback is too brief for significant analysis.";
 
-        // Return first 2 sentences as a dumb summary for now, relying on Python for advanced stuff in future
-        return Task.FromResult(string.Join(". ", sentences.Take(2)) + ".");
+        return string.Join(". ", sentences.Take(2)) + ".";
     }
 
     public async Task<string> AnswerQuestionAsync(Guid documentId, string question)
@@ -207,7 +234,16 @@ public class AiAnalysisService : IAiAnalysisService
         public string Sentiment { get; set; } = string.Empty;
         public double Probability { get; set; }
     }
-    private class BatchResultDto { public List<BatchItemDto> Results { get; set; } = new(); }
+    private class BatchResultDto
+    {
+        public List<BatchItemDto> Results { get; set; } = new();
+
+        [System.Text.Json.Serialization.JsonPropertyName("extracted_themes")]
+        public List<string> ExtractedThemes { get; set; } = new();
+
+        [System.Text.Json.Serialization.JsonPropertyName("sensitivity_alert")]
+        public bool SensitivityAlert { get; set; }
+    }
     private class BatchItemDto { public string Text { get; set; } = string.Empty; public string Sentiment { get; set; } = string.Empty; }
     private class SummarizeResultDto { public string Summary { get; set; } = string.Empty; }
 }
