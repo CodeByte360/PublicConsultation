@@ -6,6 +6,7 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
 import nltk
+import re
 
 app = Flask(__name__)
 
@@ -35,10 +36,13 @@ def get_professional_score(text):
         lower_text = text.lower()
         
         # Manual check for clear Romanized Bengali negations that models sometimes miss
-        # e.g., "ekmot noi" (not agree), "bhalo na" (not good)
-        negation_markers = [" ekmot noi", " ekmat noi", " na ", " bhalo na", " thik nai"]
-        if any(marker in lower_text for marker in negation_markers):
+        negation_pattern = r'\b(na|noi|ekmot noi|ekmat noi|bhalo na|thik nai|sommot noi|manda|kharap|sotik noy|bhul|sotik na|dorkar nai|nai)\b'
+        if re.search(negation_pattern, lower_text):
              return "Negative", 0.8, -0.8
+             
+        positive_pattern = r'\b(bhalo|thik ache|sotik|sahomot|sommot|dhonyobad|darun|shundor|valo|ekmot|ekmat)\b'
+        if re.search(positive_pattern, lower_text):
+             return "Positive", 0.8, 0.8
 
         prediction = sentiment_task(text)[0]
         label = prediction['label']
