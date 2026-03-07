@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from transformers import pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 from sumy.parsers.plaintext import PlaintextParser
@@ -8,7 +8,20 @@ from sumy.summarizers.lsa import LsaSummarizer
 import nltk
 
 app = Flask(__name__)
-analyzer = SentimentIntensityAnalyzer()
+
+# Initialize Multilingual Sentiment Analysis (DistilBERT)
+# This model is more stable and supports English, Bengali, and many others.
+sentiment_task = pipeline("sentiment-analysis", model="lxyuan/distilbert-base-multilingual-cased-sentiments-student")
+
+# Map model labels to professional sentiment names
+label_mapping = {
+    "positive": "Positive",
+    "neutral": "Neutral",
+    "negative": "Negative"
+}
+
+# Extend VADER lexicon for Romanized Bengali (Mixed Words)
+# This is now handled by the Multilingual Transformer above.
 
 # Initialize sumy resources (extractive summarization)
 try:
@@ -17,23 +30,31 @@ except LookupError:
     nltk.download('punkt')
 
 def get_professional_score(text):
-    # VADER analysis
-    scores = analyzer.polarity_scores(text)
-    compound = scores['compound']
-    
-    # Professional thresholds
-    if compound >= 0.05:
-        sentiment = "Positive"
-        # Map -1..1 to 0..1 probability-ish score for UI consistency
-        probability = 0.5 + (compound / 2)
-    elif compound <= -0.05:
-        sentiment = "Negative"
-        probability = 0.5 + (abs(compound) / 2)
-    else:
-        sentiment = "Neutral"
-        probability = 0.0
+    # Perform Multilingual Transformer analysis
+    try:
+        lower_text = text.lower()
+        
+        # Manual check for clear Romanized Bengali negations that models sometimes miss
+        # e.g., "ekmot noi" (not agree), "bhalo na" (not good)
+        negation_markers = [" ekmot noi", " ekmat noi", " na ", " bhalo na", " thik nai"]
+        if any(marker in lower_text for marker in negation_markers):
+             return "Negative", 0.8, -0.8
 
-    return sentiment, probability, compound
+        prediction = sentiment_task(text)[0]
+        label = prediction['label']
+        probability = prediction['score']
+        
+        sentiment = label_mapping.get(label, "Neutral")
+        
+        # Approximate compound score for legacy batch sensitivity logic (-1 to 1)
+        compound = 0.0
+        if sentiment == "Positive": compound = probability
+        elif sentiment == "Negative": compound = -probability
+        
+        return sentiment, probability, compound
+    except Exception as e:
+        print(f"Error in sentiment analysis: {e}")
+        return "Neutral", 0.0, 0.0
 
 @app.route('/analyze_sentiment', methods=['POST'])
 def analyze_sentiment():

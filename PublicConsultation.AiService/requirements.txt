@@ -6,3 +6,6 @@ numpy
 vaderSentiment
 sumy
 lxml
+transformers
+torch
+tiktoken
