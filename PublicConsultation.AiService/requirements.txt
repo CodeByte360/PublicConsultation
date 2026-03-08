@@ -9,3 +9,15 @@ lxml
 transformers
 torch
 tiktoken
+---------
+pip install Flask
+pip install scikit-learn
+pip install pandas
+pip install joblib
+pip install numpy
+pip install vaderSentiment
+pip install sumy
+pip install lxml
+pip install transformers
+pip install torch
+pip install tiktoken

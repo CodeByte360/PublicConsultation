@@ -35,13 +35,27 @@ def get_professional_score(text):
     try:
         lower_text = text.lower()
         
-        # Manual check for clear Romanized Bengali negations that models sometimes miss
-        negation_pattern = r'\b(na|noi|ekmot noi|ekmat noi|bhalo na|thik nai|sommot noi|manda|kharap|sotik noy|bhul|sotik na|dorkar nai|nai)\b'
-        if re.search(negation_pattern, lower_text):
+        # 1. First, check for explicit NEGATIVE phrases (multi-word overrides everything)
+        negation_phrases = r'\b(ekmot noi|ekmat noi|bhalo na|thik nai|sommot noi|sohomot noi|sotik noy|sotik na|dorkar nai)\b'
+        if re.search(negation_phrases, lower_text):
+            return "Negative", 0.9, -0.9
+            
+        # 2. Then check for strong single-word negatives 
+        # (Be careful here, 'na' might just be a filler, but we count it as negative if no positive phrases exist)
+        negation_words = r'\b(noi|manda|kharap|bhul|nai)\b'
+        if re.search(negation_words, lower_text):
              return "Negative", 0.8, -0.8
              
-        positive_pattern = r'\b(bhalo|thik ache|sotik|sahomot|sommot|dhonyobad|darun|shundor|valo|ekmot|ekmat)\b'
-        if re.search(positive_pattern, lower_text):
+        # 3. If no explicit negations, check for explicit POSITIVE phrases/words
+        positive_pattern = r'\b(bhalo|thik ache|sotik|sahomot|sommot|sohomot|dhonyobad|darun|shundor|valo|ekmot|ekmat)\b'
+        is_positive = re.search(positive_pattern, lower_text)
+        
+        # 4. Handle standalone 'na' loosely. If they said 'na' but also 'bhalo', we might want transformer to decide, 
+        # but usually 'bhalo na' is caught by step 1. If it's just 'na' and no positive word, it's negative.
+        if re.search(r'\b(na)\b', lower_text) and not is_positive:
+             return "Negative", 0.7, -0.7
+             
+        if is_positive:
              return "Positive", 0.8, 0.8
 
         prediction = sentiment_task(text)[0]
