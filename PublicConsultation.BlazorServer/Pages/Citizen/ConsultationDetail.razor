@@ -36,7 +36,11 @@
             <MudAlert Severity="Severity.Info">Click on "Give Opinion" next to any rule to submit your feedback.</MudAlert>
         </MudPaper>
 
-        <MudText Typo="Typo.h5" Class="mb-4">Draft Rules</MudText>
+        <div class="d-flex justify-space-between align-center mb-4">
+            <MudText Typo="Typo.h5">Draft Rules</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Assignment"
+                Href="@($"/consultation/{Id}/bulk-opinions")">Provide Opinions (Bulk Mode)</MudButton>
+        </div>
 
         @foreach (var rule in _rules)
         {

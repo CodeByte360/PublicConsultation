@@ -263,10 +263,28 @@
         .Select(g => g.Key)
         .ToList();
 
-        var sentiments = _reportRows.Where(r => r.Analysis != null).Select(r => r.Analysis!.Sentiment).ToList();
-        if (sentiments.Count(s => s == "Negative") > sentiments.Count / 3) _globalSentiment = "Negative";
-        else if (sentiments.Count(s => s == "Positive") > sentiments.Count / 2) _globalSentiment = "Positive";
-        else _globalSentiment = "Mixed";
+        // Only consider segments that actually have feedback (not neutral/empty)
+        var validSentiments = _reportRows
+        .Where(r => r.Analysis != null && r.Opinions.Any())
+        .Select(r => r.Analysis!.Sentiment)
+        .ToList();
+
+        if (!validSentiments.Any())
+        {
+            _globalSentiment = "Neutral";
+        }
+        else
+        {
+            var negativeCount = validSentiments.Count(s => s == "Negative");
+            var positiveCount = validSentiments.Count(s => s == "Positive");
+
+            if (negativeCount > validSentiments.Count / 3.0)
+                _globalSentiment = "Negative";
+            else if (positiveCount > validSentiments.Count / 2.0)
+                _globalSentiment = "Positive";
+            else
+                _globalSentiment = "Mixed";
+        }
 
         var analysisResults = _reportRows.Where(r => r.Analysis != null).Select(r => r.Analysis!).ToList();
         if (analysisResults.Any())
