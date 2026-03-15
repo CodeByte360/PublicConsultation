@@ -48,10 +48,18 @@
                 <div class="d-flex justify-space-between">
                     <MudText Typo="Typo.h6">Rule @rule.RuleNumber: @rule.SectionTitle</MudText>
                     <div>
-                        <MudButton Variant="Variant.Filled" Color="@(HasSubmitted(rule.Oid) ? Color.Success : Color.Primary)"
-                            StartIcon="@(HasSubmitted(rule.Oid) ? Icons.Material.Filled.Check : Icons.Material.Filled.Comment)"
-                            Disabled="@HasSubmitted(rule.Oid)" OnClick="@(() => OpenOpinionDialog(rule))">
-                            @(HasSubmitted(rule.Oid) ? "Submitted" : "Give Opinion")
+                        @{
+                            var isConsultationOpen = _document?.ConsultationEndDate >= DateTime.Now;
+                            var hasSubmitted = HasSubmitted(rule.Oid);
+                            var btnColor = hasSubmitted ? Color.Success : Color.Primary;
+                            var btnIcon = hasSubmitted ? Icons.Material.Filled.Edit : Icons.Material.Filled.Comment;
+                            var btnText = hasSubmitted ? "Edit Opinion" : "Give Opinion";
+                        }
+                        
+                        <MudButton Variant="Variant.Filled" Color="@btnColor"
+                            StartIcon="@btnIcon"
+                            Disabled="@(!isConsultationOpen)" OnClick="@(() => OpenOpinionDialog(rule))">
+                            @btnText
                         </MudButton>
                         <MudIconButton Icon="@Icons.Material.Filled.Compare" Color="Color.Info" Title="Compare Changes"
                             OnClick="@(() => OpenDiffDialog(rule))" Class="ml-2" />
@@ -191,11 +199,19 @@
             _rules = await DbContext.Rules.Where(r => r.DraftDocumentId == Id).OrderBy(r => r.DisplayOrder).ToListAsync();
 
             var ruleIds = _rules.Select(r => r.Oid).ToList();
-            var allOpinions = await DbContext.Opinions
-            .Include(o => o.User)
-            .Where(o => ruleIds.Contains(o.RuleId))
-            .OrderByDescending(o => o.CreatedDate)
-            .ToListAsync();
+            
+            var opinionsQuery = DbContext.Opinions
+                .Include(o => o.User)
+                .Where(o => ruleIds.Contains(o.RuleId));
+
+            if (!isAdmin && !user.IsInRole("Official"))
+            {
+                opinionsQuery = opinionsQuery.Where(o => o.UserId == _currentUserId);
+            }
+
+            var allOpinions = await opinionsQuery
+                .OrderByDescending(o => o.CreatedDate)
+                .ToListAsync();
 
             _ruleOpinions = allOpinions.GroupBy(o => o.RuleId).ToDictionary(g => g.Key, g => g.ToList());
 

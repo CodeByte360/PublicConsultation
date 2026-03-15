@@ -16,7 +16,7 @@
             <div class="d-flex align-center">
                 <MudIcon Icon="@Icons.Material.Filled.RateReview" Class="mr-3" Color="Color.Primary" />
                 <div>
-                    <MudText Typo="Typo.h6">Submit Public Feedback</MudText>
+                    <MudText Typo="Typo.h6">@(model.Oid == Guid.Empty ? "Submit Public Feedback" : "Edit Public Feedback")</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">Your feedback helps shape the legislative
                         process for <b>Rule @RuleNumber</b>.</MudText>
                 </div>
@@ -68,8 +68,8 @@
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Text" Class="px-6">Cancel</MudButton>
         <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit"
-            Disabled="@(!success || _isCheckingDuplicate)" StartIcon="@Icons.Material.Filled.Send" Class="px-8">
-            Submit Feedback
+            Disabled="@(!success || _isCheckingDuplicate)" StartIcon="@(model.Oid == Guid.Empty ? Icons.Material.Filled.Send : Icons.Material.Filled.Save)" Class="px-8">
+            @(model.Oid == Guid.Empty ? "Submit Feedback" : "Save Changes")
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -87,6 +87,17 @@
     private bool _isDuplicateDetected = false;
     private bool _isCheckingDuplicate = false;
     private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var existingOpinion = await DbContext.Opinions
+            .FirstOrDefaultAsync(o => o.RuleId == RuleId && o.UserId == UserId);
+            
+        if (existingOpinion != null)
+        {
+            model = existingOpinion;
+        }
+    }
 
     private async Task OnTextChanged(string val)
     {
@@ -160,7 +171,16 @@
                 model.Sentiment = await AiService.AnalyzeSentimentAsync(model.OpinionText);
                 model.Summary = await AiService.SummarizeOpinionAsync(model.OpinionText);
 
-                DbContext.Opinions.Add(model);
+                if (model.Oid == Guid.Empty)
+                {
+                    model.Oid = Guid.NewGuid();
+                    DbContext.Opinions.Add(model);
+                }
+                else
+                {
+                    DbContext.Opinions.Update(model);
+                }
+                
                 await DbContext.SaveChangesAsync();
 
                 // Log activity

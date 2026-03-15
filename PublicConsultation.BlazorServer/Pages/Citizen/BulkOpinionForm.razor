@@ -71,21 +71,15 @@
                     <div style="flex: 1; padding-left: 24px;" class="border-l-2 border-solid border-gray-200 d-flex flex-column">
                         @if (ruleDef.HasExistingOpinion)
                         {
-                            <div class="d-flex align-center mb-2">
-                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" Class="mr-2" />
-                                <MudText Typo="Typo.subtitle2" Color="Color.Success">Opinion already submitted</MudText>
-                            </div>
-                            <MudPaper Class="pa-4 flex-grow-1" Outlined="true" Style="background-color: #f8f9fa;">
-                                <MudText Typo="Typo.body2" Style="white-space: pre-wrap; font-style: italic;">@ruleDef.ExistingOpinionText</MudText>
-                            </MudPaper>
+                            <MudAlert Severity="Severity.Success" Dense="true" Class="mb-2">
+                                You have already submitted feedback. You can update it below.
+                            </MudAlert>
                         }
-                        else
-                        {
-                            <MudTextField T="string" Label="Enter your opinion for this rule" Variant="Variant.Outlined" 
-                                          @bind-Value="ruleDef.NewOpinionText" Lines="10" 
-                                          Placeholder="Type your feedback, agreement, disagreement, or suggestions here..."
-                                          Class="flex-grow-1" />
-                        }
+                        <MudTextField T="string" Label="@(ruleDef.HasExistingOpinion ? "Update your opinion" : "Enter your opinion for this rule")" 
+                                      Variant="Variant.Outlined" 
+                                      @bind-Value="ruleDef.NewOpinionText" Lines="10" 
+                                      Placeholder="Type your feedback, agreement, disagreement, or suggestions here..."
+                                      Class="flex-grow-1" />
                     </div>
                 </div>
             }
@@ -121,6 +115,7 @@
     {
         public Rule Rule { get; set; } = null!;
         public bool HasExistingOpinion { get; set; }
+        public Guid? ExistingOpinionId { get; set; }
         public string ExistingOpinionText { get; set; } = string.Empty;
         public string NewOpinionText { get; set; } = string.Empty;
     }
@@ -177,17 +172,19 @@
             // Get all existing opinions for this user and these rules
             var existingOpinions = await DbContext.Opinions
                 .Where(o => o.UserId == _currentUserId && ruleIds.Contains(o.RuleId))
-                .ToDictionaryAsync(o => o.RuleId, o => o.OpinionText);
+                .ToDictionaryAsync(o => o.RuleId, o => o);
 
             _ruleDefinitions.Clear();
             foreach (var rule in rules)
             {
-                var hasOpinion = existingOpinions.TryGetValue(rule.Oid, out var opinionText);
+                var hasOpinion = existingOpinions.TryGetValue(rule.Oid, out var opinion);
                 _ruleDefinitions.Add(new RuleOpinionDefinition
                 {
                     Rule = rule,
                     HasExistingOpinion = hasOpinion,
-                    ExistingOpinionText = hasOpinion ? opinionText ?? "" : ""
+                    ExistingOpinionId = hasOpinion ? opinion?.Oid : null,
+                    ExistingOpinionText = hasOpinion ? opinion?.OpinionText ?? "" : "",
+                    NewOpinionText = hasOpinion ? opinion?.OpinionText ?? "" : ""
                 });
             }
         }
@@ -200,38 +197,67 @@
             _isSubmitting = true;
             
             var opinionsToAdd = new List<Opinion>();
+            var opinionsToUpdate = new List<Opinion>();
+            int processedCount = 0;
             
             foreach (var ruleDef in _ruleDefinitions)
             {
-                if (!ruleDef.HasExistingOpinion && !string.IsNullOrWhiteSpace(ruleDef.NewOpinionText))
+                var text = ruleDef.NewOpinionText?.Trim();
+                
+                if (!string.IsNullOrWhiteSpace(text))
                 {
-                    opinionsToAdd.Add(new Opinion
+                    if (ruleDef.HasExistingOpinion && ruleDef.ExistingOpinionId.HasValue)
                     {
-                        Oid = Guid.NewGuid(),
-                        UserId = _currentUserId,
-                        RuleId = ruleDef.Rule.Oid,
-                        OpinionText = ruleDef.NewOpinionText.Trim(),
-                        CreatedDate = DateTime.Now
-                    });
+                        // Check if text actually changed
+                        if (text != ruleDef.ExistingOpinionText)
+                        {
+                            var existing = await DbContext.Opinions.FindAsync(ruleDef.ExistingOpinionId.Value);
+                            if (existing != null)
+                            {
+                                existing.OpinionText = text;
+                                existing.CreatedDate = DateTime.UtcNow; // Update timestamp
+                                opinionsToUpdate.Add(existing);
+                                processedCount++;
+                            }
+                        }
+                    }
+                    else if (!ruleDef.HasExistingOpinion)
+                    {
+                        opinionsToAdd.Add(new Opinion
+                        {
+                            Oid = Guid.NewGuid(),
+                            UserId = _currentUserId,
+                            RuleId = ruleDef.Rule.Oid,
+                            OpinionText = text,
+                            CreatedDate = DateTime.UtcNow
+                        });
+                        processedCount++;
+                    }
                 }
             }
 
-            if (opinionsToAdd.Any())
+            if (opinionsToAdd.Any() || opinionsToUpdate.Any())
             {
-                await DbContext.Opinions.AddRangeAsync(opinionsToAdd);
+                if (opinionsToAdd.Any())
+                {
+                    await DbContext.Opinions.AddRangeAsync(opinionsToAdd);
+                }
+                
+                if (opinionsToUpdate.Any())
+                {
+                    DbContext.Opinions.UpdateRange(opinionsToUpdate);
+                }
+                
                 await DbContext.SaveChangesAsync();
                 
-                Snackbar.Add($"Successfully submitted {opinionsToAdd.Count} opinion(s)!", Severity.Success);
+                Snackbar.Add($"Successfully processed {processedCount} opinion(s)!", Severity.Success);
                 
                 // Refresh data to show submitted state
                 await LoadData();
-                
-                // Optionally navigate back to consultation list
-                // NavigationManager.NavigateTo($"/consultation/{Id}");
             }
             else
             {
-                Snackbar.Add("No new opinions entered to submit.", Severity.Info);
+                Snackbar.Add("No new or modified opinions to submit.", Severity.Info);
             }
         }
         catch (Exception ex)
