@@ -96,37 +96,44 @@ graph TD
     classDef automated fill:#FCE4EC,stroke:#E91E63,stroke-width:2px,color:#880E4F;
 
     %% Nodes
-    A([Start: Citizen Visits DPCS]) ::: startEnd
+    A([Start: Citizen Visits DPCS])
     
     %% Onboarding
-    B{Has Account?} ::: decision
-    C[Navigate to Register Page] ::: process
-    D[Input Details: Email, Phone, NID, Location] ::: action
-    E[[System Sends OTP via Email]] ::: automated
-    F{Verify OTP?} ::: decision
-    G[Account Activated & Role Assigned] ::: process
-    H[Login to Portal] ::: action
+    B{Has Account?}
+    C[Navigate to Register Page]
+    D[Input Details: Email, Phone, NID, Location]
+    E[[System Sends OTP via Email]]
+    F{Verify OTP?}
+    G[Account Activated & Role Assigned]
+    H[Login to Portal]
     
     %% Dashboard
-    I[View Citizen Dashboard] ::: process
-    J[[System Sends Email Alerts for New Laws]] ::: automated
-    K[Browse Active Consultations] ::: action
+    I[View Citizen Dashboard]
+    J[[System Sends Email Alerts for New Laws]]
+    K[Browse Active Consultations]
     
     %% Engagement
-    L[Open Specific Draft Law] ::: process
-    M{What to do next?} ::: decision
+    L[Open Specific Draft Law]
+    M{What to do next?}
     
     %% Actions
-    N[Ask Legal Chatbot about Legal Jargon] ::: action
-    O[[AI Analyzes Rule & Replies]] ::: automated
-    P[Select a specific 'Rule' / Section] ::: action
-    Q[Input Opinion + Propose Rewrite] ::: action
-    R[Use Bulk Form for Multiple Rules] ::: action
+    N[Ask Legal Chatbot about Legal Jargon]
+    O[[AI Analyzes Rule & Replies]]
+    P[Select a specific 'Rule' / Section]
+    Q[Input Opinion + Propose Rewrite]
+    R[Use Bulk Form for Multiple Rules]
     
     %% Completion
-    S[[AI Microservice Computes Sentiment & Theme]] ::: automated
-    T[Track Submission in Profile History] ::: process
-    U([End: Feedback Received]) ::: startEnd
+    S[[AI Microservice Computes Sentiment & Theme]]
+    T[Track Submission in Profile History]
+    U([End: Feedback Received])
+    
+    %% Assign Classes
+    class A,U startEnd;
+    class C,G,I,L,T process;
+    class B,F,M decision;
+    class D,H,K,N,P,Q,R action;
+    class E,J,O,S automated;
 
     %% Relationships
     A --> B
