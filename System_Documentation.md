@@ -93,7 +93,7 @@ graph TD
     classDef process fill:#E8EAF6,stroke:#3F51B5,stroke-width:2px,color:#1A237E;
     classDef decision fill:#FFF3E0,stroke:#FF9800,stroke-width:2px,color:#E65100;
     classDef action fill:#E0F2F1,stroke:#009688,stroke-width:2px,color:#004D40;
-    classDef automated fill:#FCE4EC,stroke:#E91E63,stroke-width:2px,color:#880E4F,stroke-dasharray: 5,5;
+    classDef automated fill:#FCE4EC,stroke:#E91E63,stroke-width:2px,color:#880E4F;
 
     %% Nodes
     A([Start: Citizen Visits DPCS]) ::: startEnd
