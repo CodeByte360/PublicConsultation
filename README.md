@@ -54,6 +54,16 @@ The AI engine in DPCS has been significantly upgraded into a specialized **Pytho
 4. **Conversational Legal Assistant**: A continuous context-aware mechanism powering the citizen-facing chatbot to interpret draft laws interactively.
 5. **Risk & Sensitivity Alerts**: The AI engine calculates composite "Consensus Scores" across opinions, triggering automatic **Sensitivity Alerts** for officials if the average compound public sentiment drops below critical thresholds.
 
+### Python Dependencies & Libraries
+The standalone NLP engine relies on the following specific pip libraries to process citizen feedback securely:
+- **`Flask`**: Acts as the lightweight web server API routing, intercepting HTTP POST payloads from the .NET Core interface.
+- **`transformers` & `torch`**: Power the HuggingFace `DistilBERT` models. PyTorch handles the underlying tensor computations for fast local sentiment extraction, completely eliminating the need for paid, external endpoints (like OpenAI).
+- **`tiktoken`**: An extremely fast BPE tokeniser used to ensure lengthy citizen inputs map correctly to language model constraints.
+- **`scikit-learn` & `numpy`**: Drive the mathematical operations for Theme Extraction. Scikit-learn runs the TF-IDF (Term Frequency-Inverse Document Frequency) vectorizer, and NumPy processes the dense matrix array outputs to isolate the top 5 dominant keywords.
+- **`sumy` & `lxml`**: Sumy executes the LSA (Latent Semantic Analysis) summarization algorithm to distill long citizen opinions into 1-2 core sentences. `lxml` serves as the high-speed parsing dependency for Sumy's text tree manipulation.
+- **`vaderSentiment`**: Provides robust lexicon and rule-based sentiment scoring heuristically. (Used for rule-based overriding on Banglish slang).
+- **`pandas` & `joblib`**: Pandas provides structured `DataFrame` manipulation for evaluating massive batches of opinions efficiently in memory. `joblib` caches and optimizes the loading of vectorized models from disk.
+
 ---
 
 ## 🛡️ Biometric Security & Management

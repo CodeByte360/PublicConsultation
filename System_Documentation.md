@@ -292,3 +292,13 @@ graph TD
 1. **Delegation**: The Blazor frontend leaves heavy logic to Python. It ships text payloads to Flask routes.
 2. **Analysis Pipelines**: The system routes logic correctly. Individual sentiments run through `DistilBERT` coupled with hard-coded Regex overrides for common Bengali slangs that transformers might incorrectly classify.
 3. **Consolidation**: Instead of storing every analysis, batch loops summarize text using Extractive mathematics (Sumy) and vectorize thematic keywords (TF-IDF) before handing it back to C# for Dashboarding.
+
+### 5.4 AI Microservice Dependencies (Python Stack)
+The standalone NLP engine relies heavily on the following specific pip libraries to process citizen feedback securely and entirely locally:
+*   **`Flask`**: Acts as the lightweight web server API routing, intercepting HTTP POST payloads from the .NET Core interface.
+*   **`transformers`** & **`torch`**: Power the HuggingFace `DistilBERT` machine learning models. PyTorch handles the underlying mathematical tensor computations for fast local sentiment extraction, completely eliminating the need for paid, external API endpoints (like OpenAI).
+*   **`tiktoken`**: An extremely fast BPE tokeniser used to reliably ensure lengthy language blocks map efficiently into model memory constraints.
+*   **`scikit-learn`** & **`numpy`**: Drive the operations for Theme Extraction. Scikit-learn runs the TF-IDF (Term Frequency-Inverse Document Frequency) vectorizer, and NumPy processes the dense matrix array outputs to rapidly isolate the overall top 5 dominant conversational keywords.
+*   **`sumy`** & **`lxml`**: Sumy executes the LSA (Latent Semantic Analysis) summarization algorithm to distill extremely long citizen opinions into 1-2 core sentences. `lxml` acts as the high-speed parsing dependency vital for Sumy's text tree manipulation.
+*   **`vaderSentiment`**: Provides robust lexicon and rule-based sentiment scoring heuristically (utilized for rule-based overriding on Banglish slang phrases).
+*   **`pandas`** & **`joblib`**: Pandas provides structured `DataFrame` manipulation for evaluating massive batches of opinions comprehensively in memory. `joblib` is leveraged to cache and optimize the loading of vectorized models directly from disk, significantly lowering latency.
