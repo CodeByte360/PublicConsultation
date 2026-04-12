@@ -201,30 +201,66 @@ graph TD
     classDef apiRoute fill:#F3E5F5,stroke:#9C27B0,stroke-width:2px,color:#4A148C;
     classDef internalLogic fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#F57F17;
 
-    A([.NET Core Application]) ::: dotNet -->|HTTP Data Payload| B{Python Flask API} ::: apiRoute
+    A([.NET Core Application])
+    B{Python Flask API}
+    A:::dotNet
+    B:::apiRoute
+    
+    A -->|HTTP Data Payload| B
     
     subgraph singleSentiment [Single Sentiment Route]
-        B -->|POST /analyze_sentiment| C1[Check Custom Regex Rules] ::: internalLogic
-        C1 --> C2[Execute DistilBERT Transformer] ::: internalLogic
-        C2 --> C3[Calculate Positive/Negative Score] ::: internalLogic
+        C1[Check Custom Regex Rules]
+        C2[Execute DistilBERT Transformer]
+        C3[Calculate Positive/Negative Score]
+        C1:::internalLogic
+        C2:::internalLogic
+        C3:::internalLogic
+        
+        B -->|POST /analyze_sentiment| C1
+        C1 --> C2
+        C2 --> C3
     end
     
     subgraph docSummarization [Document Summarization]
-        B -->|POST /summarize| S1[Format large text block] ::: internalLogic
-        S1 --> S2[Run Sumy LSA Summarization] ::: internalLogic
-        S2 --> S3[Extract top 2 core sentences] ::: internalLogic
+        S1[Format large text block]
+        S2[Run Sumy LSA Summarization]
+        S3[Extract top 2 core sentences]
+        S1:::internalLogic
+        S2:::internalLogic
+        S3:::internalLogic
+        
+        B -->|POST /summarize| S1
+        S1 --> S2
+        S2 --> S3
     end
     
     subgraph batchIntelligence [Batch Intelligence]
-        B -->|POST /analyze_batch| B1[Score Individual Sentiments] ::: internalLogic
-        B1 --> B2[TF-IDF N-Gram Vectorization] ::: internalLogic
-        B2 --> B3[Extract top 5 prominent Themes] ::: internalLogic
-        B3 --> B4{Compute Average Sentiment} ::: internalLogic
-        B4 -->|< -0.3| B5[Set Risk Alert = TRUE] ::: apiRoute
-        B4 -->|>= -0.3| B6[Set Risk Alert = FALSE] ::: apiRoute
+        B1[Score Individual Sentiments]
+        B2[TF-IDF N-Gram Vectorization]
+        B3[Extract top 5 prominent Themes]
+        B4{Compute Average Sentiment}
+        B5[Set Risk Alert = TRUE]
+        B6[Set Risk Alert = FALSE]
+        
+        B1:::internalLogic
+        B2:::internalLogic
+        B3:::internalLogic
+        B4:::internalLogic
+        B5:::apiRoute
+        B6:::apiRoute
+        
+        B -->|POST /analyze_batch| B1
+        B1 --> B2
+        B2 --> B3
+        B3 --> B4
+        B4 -->|< -0.3| B5
+        B4 -->|>= -0.3| B6
     end
     
-    C3 --> Z([Return JSON to .NET]) ::: dotNet
+    Z([Return JSON to .NET])
+    Z:::dotNet
+    
+    C3 --> Z
     S3 --> Z
     B5 --> Z
     B6 --> Z
