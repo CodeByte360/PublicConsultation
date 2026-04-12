@@ -1,28 +1,43 @@
 # Digital Public Consultation System (DPCS) - System Architecture & Technical Documentation
 
-This document provides a deep dive into the technical architecture, core algorithms, security mechanisms, and data models powering the Digital Public Consultation System (DPCS).
+## Executive Summary & System Overview
+Welcome to the Digital Public Consultation System (DPCS). This architecture document is designed to onboard new developers, system architects, and government stakeholders by providing a comprehensive, deep-dive understanding of the platform's features, functions, and operational workflows.
+
+**What is DPCS?** 
+DPCS is a highly secure, AI-powered legislative platform designed to bridge the gap between government bodies (Ministries) and the general public (Citizens). Traditionally, draft laws are published as massive, monolithic PDFs, and public feedback is collected as unstructured emails, making it impossible for officials to accurately measure public consensus.
+
+DPCS solves this by:
+1. **Shredding Documents**: Automatically breaking down monolithic draft laws into granular, section-by-section rules.
+2. **Targeted Engagement**: Allowing citizens to comment on and propose exact text rewrites for specific legal clauses, rather than writing generalized essays.
+3. **AI Intelligence**: Utilizing an internal Python-based Natural Language Processing (NLP) microservice to instantly read, summarize, and extract sentiment from thousands of citizen comments.
+4. **Zero-Trust Security**: Securing administrative actions using hardware-accelerated fingerprint biometrics and immutable blockchain-lite audit logs.
+
+This documentation maps out exactly how these components interact at the data, logic, and workflow levels.
 
 ---
 
 ## 1. Core Entities (Domain Data Model)
 
-The system revolves around a robust SQL Server schema mapped via Entity Framework Core. The prominent entities are grouped by their operational domain:
+The foundation of DPCS is built upon a robust SQL Server schema mapped via Entity Framework (EF) Core. Understanding this relational data model is step one to understanding how data flows from a Ministry to a Citizen and into the AI engine. The entities are logically grouped into three main operational domains:
 
 ### 1.1 Identity & Security Entities
-*   **`UserAccount`**: The central identity representation. Enforces unique constraints upon registration for `Email`, `PhoneNumber`, and `NIDNumber`. Stores hashed credentials (`PasswordHash`) and tracks the user's origin (`PoliceStationId`). Includes states: `IsVerified` and `IsActive`.
-*   **`Role`**: Defines the Role-Based Access Control (RBAC) classifications. Linked to users via a Foreign Key (`RoleId`).
-*   **`Biometric`**: A secure, isolated entity linking a `UserAccountId` to four distinct fingerprint templates stored strictly as ISO-19794-2 byte strings, shielding raw image data.
+These entities handle who is using the system, what they are allowed to do, and cryptographically proving their identity.
+*   **`UserAccount`**: The central representation of any human interacting with the system. It enforces strict uniqueness constraints upon registration (no duplicate `Email`, `PhoneNumber`, or `NIDNumber`) to prevent identity spoofing. It stores securely hashed credentials (`PasswordHash`) and tracks demographic origins via `PoliceStationId`. It maintains boolean states for `IsVerified` (OTP passed) and `IsActive`.
+*   **`Role`**: Defines the system's Role-Based Access Control (RBAC) classifications (e.g., *Citizen*, *Admin*, *MinistryOfficial*). It is tightly coupled to users via a Foreign Key (`RoleId`), controlling access to API endpoints and Blazor pages.
+*   **`Biometric`**: A highly secure, isolated hardware entity linking a `UserAccountId` to four distinct fingerprint templates. Crucially, these are stored strictly as **ISO-19794-2 byte strings**. The system never stores raw fingerprint images to ensure absolute biometric data privacy.
 
 ### 1.2 Consultation Workflow Entities
-*   **`Ministry`**: Represents the government body originating the law.
-*   **`DraftDocument`**: The overarching policy or legislative act published for review.
-*   **`Rule`**: Crucial micro-components. The backend shredder parses `DraftDocuments` into smaller `Rule` entities. This architecture enables section-by-section public engagement rather than generalized document feedback.
-*   **`Opinion`**: Maps a `UserAccount` to a specific `Rule`. Contains the raw `OpinionText`, optional citizen `Suggestion` (rewrite), and internally computed fields for `Sentiment` and `Summary`.
+These entities track the lifecycle of a draft law passing from government creation into the hands of the public.
+*   **`Ministry`**: Represents the specific government body or department originating the legislative draft.
+*   **`DraftDocument`**: The macro-level policy or legislative act published for public review.
+*   **`Rule`**: The most critical micro-component of the system. The backend PDF/DOCX shredder parses a `DraftDocument` into dozens of smaller `Rule` records. This architecture is what enables DPCS's signature feature: *section-by-section public engagement*.
+*   **`Opinion`**: The transactional bridge mapping a `UserAccount` to a specific `Rule`. It captures the citizen's raw feedback (`OpinionText`), their optional legal rewrite (`Suggestion`), and reserves fields for the AI Microservice to inject computationally generated `Sentiment` scores and `Summary` tags.
 
-### 1.3 Operations & ML Entities
-*   **`AuditLog`**: An append-only historical log for all administrative state changes, enabling the "Blockchain-Lite" transparency features.
-*   **`AiAnalysisResult`**: Caches and stores aggregated metrics, holding properties like `ConsensusScore` (0.0 to 1.0), dominant `KeyThemes` arrays, and structural summaries utilized for Comparative Reports.
-*   **`Location Matrix`**: Composed of `Division`, `District`, and `PoliceStation` to provide hyper-local demographic tagging.
+### 1.3 Operations & Machine Learning Analytics Entities
+These entities handle system transparency and the heavy data-crunching results returned by the Python AI engine.
+*   **`AuditLog`**: An append-only historical tracking table. Every sensitive administrative state change (e.g., publishing a law, logging in via biometrics) is recorded here using hash-chaining, powering the "Blockchain-Lite" public transparency UI.
+*   **`AiAnalysisResult`**: Caches and stores aggregated NLP metrics. Instead of re-calculating thousands of rows on every dashboard load, this holds properties like `ConsensusScore` (0.0 to 1.0) and dominant `KeyThemes` arrays, which are directly utilized to rapidly generate the final Cabinet Comparative Reports.
+*   **`Location Matrix`**: A tiered hierarchy composed of `Division`, `District`, and `PoliceStation` tables, used to provide hyper-local demographic tagging for users and reports.
 
 ---
 
