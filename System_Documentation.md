@@ -1,0 +1,304 @@
+# Digital Public Consultation System (DPCS) - System Architecture & Technical Documentation
+
+## Executive Summary & System Overview
+Welcome to the Digital Public Consultation System (DPCS). This architecture document is designed to onboard new developers, system architects, and government stakeholders by providing a comprehensive, deep-dive understanding of the platform's features, functions, and operational workflows.
+
+**What is DPCS?** 
+DPCS is a highly secure, AI-powered legislative platform designed to bridge the gap between government bodies (Ministries) and the general public (Citizens). Traditionally, draft laws are published as massive, monolithic PDFs, and public feedback is collected as unstructured emails, making it impossible for officials to accurately measure public consensus.
+
+DPCS solves this by:
+1. **Shredding Documents**: Automatically breaking down monolithic draft laws into granular, section-by-section rules.
+2. **Targeted Engagement**: Allowing citizens to comment on and propose exact text rewrites for specific legal clauses, rather than writing generalized essays.
+3. **AI Intelligence**: Utilizing an internal Python-based Natural Language Processing (NLP) microservice to instantly read, summarize, and extract sentiment from thousands of citizen comments.
+4. **Zero-Trust Security**: Securing administrative actions using hardware-accelerated fingerprint biometrics and immutable blockchain-lite audit logs.
+
+This documentation maps out exactly how these components interact at the data, logic, and workflow levels.
+
+---
+
+## 1. Core Entities (Domain Data Model)
+
+The foundation of DPCS is built upon a robust SQL Server schema mapped via Entity Framework (EF) Core. Understanding this relational data model is step one to understanding how data flows from a Ministry to a Citizen and into the AI engine. The entities are logically grouped into three main operational domains:
+
+### 1.1 Identity & Security Entities
+These entities handle who is using the system, what they are allowed to do, and cryptographically proving their identity.
+*   **`UserAccount`**: The central representation of any human interacting with the system. It enforces strict uniqueness constraints upon registration (no duplicate `Email`, `PhoneNumber`, or `NIDNumber`) to prevent identity spoofing. It stores securely hashed credentials (`PasswordHash`) and tracks demographic origins via `PoliceStationId`. It maintains boolean states for `IsVerified` (OTP passed) and `IsActive`.
+*   **`Role`**: Defines the system's Role-Based Access Control (RBAC) classifications (e.g., *Citizen*, *Admin*, *MinistryOfficial*). It is tightly coupled to users via a Foreign Key (`RoleId`), controlling access to API endpoints and Blazor pages.
+*   **`Biometric`**: A highly secure, isolated hardware entity linking a `UserAccountId` to four distinct fingerprint templates. Crucially, these are stored strictly as **ISO-19794-2 byte strings**. The system never stores raw fingerprint images to ensure absolute biometric data privacy.
+
+### 1.2 Consultation Workflow Entities
+These entities track the lifecycle of a draft law passing from government creation into the hands of the public.
+*   **`Ministry`**: Represents the specific government body or department originating the legislative draft.
+*   **`DraftDocument`**: The macro-level policy or legislative act published for public review.
+*   **`Rule`**: The most critical micro-component of the system. The backend PDF/DOCX shredder parses a `DraftDocument` into dozens of smaller `Rule` records. This architecture is what enables DPCS's signature feature: *section-by-section public engagement*.
+*   **`Opinion`**: The transactional bridge mapping a `UserAccount` to a specific `Rule`. It captures the citizen's raw feedback (`OpinionText`), their optional legal rewrite (`Suggestion`), and reserves fields for the AI Microservice to inject computationally generated `Sentiment` scores and `Summary` tags.
+
+### 1.3 Operations & Machine Learning Analytics Entities
+These entities handle system transparency and the heavy data-crunching results returned by the Python AI engine.
+*   **`AuditLog`**: An append-only historical tracking table. Every sensitive administrative state change (e.g., publishing a law, logging in via biometrics) is recorded here using hash-chaining, powering the "Blockchain-Lite" public transparency UI.
+*   **`AiAnalysisResult`**: Caches and stores aggregated NLP metrics. Instead of re-calculating thousands of rows on every dashboard load, this holds properties like `ConsensusScore` (0.0 to 1.0) and dominant `KeyThemes` arrays, which are directly utilized to rapidly generate the final Cabinet Comparative Reports.
+*   **`Location Matrix`**: A tiered hierarchy composed of `Division`, `District`, and `PoliceStation` tables, used to provide hyper-local demographic tagging for users and reports.
+
+---
+
+## 2. Roles, Permissions, & Authentication
+
+### 2.1 Role-Based Access Control (RBAC)
+Authorizations are structured implicitly by `Role`.
+*   **Citizen Role**: Assigned as the system default upon `Register.razor` submission. Grants read access to `DraftDocuments`, write access to `Opinion` endpoints, and interaction with the `LegalChatbot`.
+*   **Administrative Roles**: Empowered to access the `Admin/` subsystem. Grants access to `DocumentService` for uploads, Dashboard BI tools to view AI Consensus logic, and system configurations. High-trust actions within this context prompt Biometric Verification.
+
+### 2.2 Standard Authentication & Cryptography
+*   **Logic Handler**: `AuthService.cs`.
+*   **Hashing**: DPCS implements **BCrypt.Net** to cryptographically hash passwords with adaptive salting.
+*   **Uniqueness Checks**: At registration, `IsEmailUniqueAsync`, `IsPhoneUniqueAsync`, and `IsNidUniqueAsync` queries ensure no duplicate entities cause data fragmentation or fraud.
+
+---
+
+## 3. High-Security Validations (OTP & Biometrics)
+
+DPCS enforces multi-layered verification handling depending on the user severity and intent.
+
+### 3.1 Initial Identity Verification (Email OTP)
+Used primarily during the Citizen registration workflow to prevent bot-flooding.
+1.  **Generation**: Inside `OtpService.cs`, a randomized 6-digit passcode is created.
+2.  **Transient Storage**: The OTP is saved in `IMemoryCache` associated with the registrant's email address and tagged with an explicit 5-minute `AbsoluteExpiration`.
+3.  **Delivery & Verification**: Pushed via SMTP through `EmailService.cs`. The user's input (`Register.razor`) is validated against memory. A hit clears the cache and marks the initial step as `isEmailVerified = true`.
+
+### 3.2 "Zero-Trust" Biometric Validations
+Ensures ultimate repudiation prevention for Administrative accounts.
+1.  **Framework integration**: Connects with `SecuGen` hardware via WebAPI bindings.
+2.  **Comparison Logic**: `BiometricService` manages the domain interaction, but **Match Operations** operate locally within the client ecosystem via Javascript Interop. By transmitting the ISO template to the browser instead of raw hashes to the server, interception risk is minimized.
+3.  **Threshold Requirements**: A stringent "Score > 100" algorithmic logic dictates action success. Used to confirm Administrative logins and before finalizing comparative statements for Cabinet.
+
+---
+
+## 4. Key Functions and AI Logics
+
+The project's architectural standout is its automated workflow combining C# data processing with a custom Python NLP Flask Microservice.
+
+### 4.1 Parser Logic (`DocumentService`)
+When a document is uploaded, it must bypass traditional blob-storage. The parser parses headings and paragraphs via RegEx patterns, creating discrete `Rule` (Row) elements in the database automatically. 
+
+### 4.2 Distributed AI Feedback Intelligence
+Once opinions are registered on a `Rule`, the logic offloads via HTTP to the Python Microservice `AiAnalysisService`:
+*   **Sentiment Extraction Logic**: Handles multilingual comments (`English` + `Bengali`). Before relying natively on DistilBERT (`lxyuan/distilbert-base-multilingual-cased-sentiments-student`), a customized `re.search` overrides the model, looking for hard-coded exact phrases denoting Negation (e.g., `ekmot noi`, `nai`) or Positivity (e.g., `sohomot`) inside Romanized Bengali expressions.
+*   **Calculated Consensus**: Sentiments assign a compound `Probability` score (-1.0 to 1.0). The `AnalyzeBatchAsync` functionality averages the batch probability. **Logic Rule**: If `avg_compound < -0.3`, a `Sensitivity Alert` is explicitly thrown to officials.
+*   **Theme Extraction Algorithm**: Implemented by feeding all text chunks from an Opinion Batch into Scikit-Learn’s `TfidfVectorizer`. Using 2-nGram matrices, it mathematically selects the top 5 frequently utilized nouns that don’t exist in standard English stopwords, directly defining the "Key Themes" attribute shown to admins.
+
+### 4.3 AI Chatbot Contextual Logic
+The `LegalChatbot.razor` UI passes the `DocumentId` context and the citizen's query. The logic isolates the underlying `Rules` attached to that document and injects them alongside the system query to contextualize accurate legal translations instantly without altering the fundamental entity framework.
+
+### 4.4 Comparative Matrix Output
+To connect the loop safely to legacy government flow, the `Admin/Reports/ComparativeStatement.razor` binds raw law text alongside aggregate AI Summaries, yielding an easily readable, section-by-section generated grid ready to be exported for high-level officials without any manual data crunching.
+
+---
+
+## 5. Role-Based Workflows
+
+The system diverges operationally based on the authenticated actor's `Role`. Below are the core journey maps for both Citizens and Administrative Officials.
+
+### 5.1 Citizen Workflow (The Public Voice)
+The Citizen role is strictly structured around review, comprehension, and contribution to policies.
+
+```mermaid
+graph TD
+    %% Styling
+    classDef startEnd fill:#1A237E,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef process fill:#E8EAF6,stroke:#3F51B5,stroke-width:2px,color:#1A237E;
+    classDef decision fill:#FFF3E0,stroke:#FF9800,stroke-width:2px,color:#E65100;
+    classDef action fill:#E0F2F1,stroke:#009688,stroke-width:2px,color:#004D40;
+    classDef automated fill:#FCE4EC,stroke:#E91E63,stroke-width:2px,color:#880E4F;
+
+    %% Nodes
+    A([Start: Citizen Visits DPCS])
+    
+    %% Onboarding
+    B{Has Account?}
+    C[Navigate to Register Page]
+    D[Input Details: Email, Phone, NID, Location]
+    E[[System Sends OTP via Email]]
+    F{Verify OTP?}
+    G[Account Activated & Role Assigned]
+    H[Login to Portal]
+    
+    %% Dashboard
+    I[View Citizen Dashboard]
+    J[[System Sends Email Alerts for New Laws]]
+    K[Browse Active Consultations]
+    
+    %% Engagement
+    L[Open Specific Draft Law]
+    M{What to do next?}
+    
+    %% Actions
+    N[Ask Legal Chatbot about Legal Jargon]
+    O[[AI Analyzes Rule & Replies]]
+    P[Select a specific 'Rule' / Section]
+    Q[Input Opinion + Propose Rewrite]
+    R[Use Bulk Form for Multiple Rules]
+    
+    %% Completion
+    S[[AI Microservice Computes Sentiment & Theme]]
+    T[Track Submission in Profile History]
+    U([End: Feedback Received])
+    
+    %% Assign Classes
+    class A,U startEnd;
+    class C,G,I,L,T process;
+    class B,F,M decision;
+    class D,H,K,N,P,Q,R action;
+    class E,J,O,S automated;
+
+    %% Relationships
+    A --> B
+    B -->|No| C
+    C --> D
+    D --> E
+    E --> F
+    F -->|Invalid| D
+    F -->|Valid| G
+    G --> H
+    B -->|Yes| H
+    
+    J --> H
+    H --> I
+    I --> K
+    K --> L
+    L --> M
+    
+    M -->|Confused by terms| N
+    N --> O
+    O -.-> M
+    
+    M -->|Provide Feedback| P
+    P --> Q
+    
+    M -->|Expert / Org| R
+    
+    Q --> S
+    R --> S
+    
+    S --> T
+    T --> U
+```
+
+**Key Steps:**
+1. **Onboarding**: Uses OTP verification to establish an active identity.
+2. **Context Searching**: Citizens open a draft and interact with the `LegalChatbot.razor` to understand complex sections.
+3. **Engagement**: Instead of generic document comments, the citizen navigates to specific `Rule` blocks and injects their raw feedback & legal rewrites via the `OpinionDialog.razor`.
+
+### 5.2 Admin / Official Workflow (Strategic Management)
+The Administrator role is provisioned for creating consultations, analyzing systemic intelligence, and preparing secure documentation for high-level government bodies.
+
+```mermaid
+graph TD
+    A[Admin Login] --> B[Navigate to Operations Dashboard]
+    B --> C[Upload Draft PDF Policy]
+    C --> D[System Parses PDF into Database 'Rules']
+    D --> E[Admin Publishes Draft for Consultation]
+    E --> F[Monitor Automated AI Intelligence]
+    F --> G{Review Batch Analysis}
+    G -->|Crisis Detected| H[System Throws Sentiment Risk Alert]
+    G -->|Standard Trend| I[View Extracted Themes & Extractive Summaries]
+    H --> J[Generate Comparative Statement Document]
+    I --> J
+    J --> K[Initiate Biometric Verification]
+    K -->|SecuGen Score > 100| L[Finalize comparative report for Legislative Cabinet]
+    L --> M[Immutable Audit Log Records Decision]
+```
+
+**Key Steps:**
+1. **Creation**: Admin uploads standard documents and lets the `DocumentService` shred the file into granular database rows.
+2. **Analysis**: Continuously monitors the `PublicOpinions.razor` dashboard where the Python AI Microservice returns batch consensus and extracted vocabulary themes.
+3. **Reporting & Security**: Compiles a professional Comparative Statement. Before this statement can be marked "Final" or altered, the `BiometricService` halts the interface and mandates a live fingerprint scan via SecuGen, verifying the officer's physical presence. All transitions are permanently hashed into the `AuditLog`.
+
+### 5.3 Artificial Intelligence (NLP) Workflow
+The AI Microservice operates as a standalone Python engine. When opinions are generated by citizens, the .NET backend fires them asynchronously to this engine for analytical crunching.
+
+```mermaid
+graph TD
+    %% Styling
+    classDef dotNet fill:#E3F2FD,stroke:#2196F3,stroke-width:2px,color:#0D47A1;
+    classDef apiRoute fill:#F3E5F5,stroke:#9C27B0,stroke-width:2px,color:#4A148C;
+    classDef internalLogic fill:#FFFDE7,stroke:#FBC02D,stroke-width:2px,color:#F57F17;
+
+    A([.NET Core Application])
+    B{Python Flask API}
+    A:::dotNet
+    B:::apiRoute
+    
+    A -->|HTTP Data Payload| B
+    
+    subgraph singleSentiment [Single Sentiment Route]
+        C1[Check Custom Regex Rules]
+        C2[Execute DistilBERT Transformer]
+        C3[Calculate Positive/Negative Score]
+        C1:::internalLogic
+        C2:::internalLogic
+        C3:::internalLogic
+        
+        B -->|POST /analyze_sentiment| C1
+        C1 --> C2
+        C2 --> C3
+    end
+    
+    subgraph docSummarization [Document Summarization]
+        S1[Format large text block]
+        S2[Run Sumy LSA Summarization]
+        S3[Extract top 2 core sentences]
+        S1:::internalLogic
+        S2:::internalLogic
+        S3:::internalLogic
+        
+        B -->|POST /summarize| S1
+        S1 --> S2
+        S2 --> S3
+    end
+    
+    subgraph batchIntelligence [Batch Intelligence]
+        B1[Score Individual Sentiments]
+        B2[TF-IDF N-Gram Vectorization]
+        B3[Extract top 5 prominent Themes]
+        B4{Compute Average Sentiment}
+        B5[Set Risk Alert = TRUE]
+        B6[Set Risk Alert = FALSE]
+        
+        B1:::internalLogic
+        B2:::internalLogic
+        B3:::internalLogic
+        B4:::internalLogic
+        B5:::apiRoute
+        B6:::apiRoute
+        
+        B -->|POST /analyze_batch| B1
+        B1 --> B2
+        B2 --> B3
+        B3 --> B4
+        B4 -->|< -0.3| B5
+        B4 -->|>= -0.3| B6
+    end
+    
+    Z([Return JSON to .NET])
+    Z:::dotNet
+    
+    C3 --> Z
+    S3 --> Z
+    B5 --> Z
+    B6 --> Z
+```
+
+**Key Steps:**
+1. **Delegation**: The Blazor frontend leaves heavy logic to Python. It ships text payloads to Flask routes.
+2. **Analysis Pipelines**: The system routes logic correctly. Individual sentiments run through `DistilBERT` coupled with hard-coded Regex overrides for common Bengali slangs that transformers might incorrectly classify.
+3. **Consolidation**: Instead of storing every analysis, batch loops summarize text using Extractive mathematics (Sumy) and vectorize thematic keywords (TF-IDF) before handing it back to C# for Dashboarding.
+
+### 5.4 AI Microservice Dependencies (Python Stack)
+The standalone NLP engine relies heavily on the following specific pip libraries to process citizen feedback securely and entirely locally:
+*   **`Flask`**: Acts as the lightweight web server API routing, intercepting HTTP POST payloads from the .NET Core interface.
+*   **`transformers`** & **`torch`**: Power the HuggingFace `DistilBERT` machine learning models. PyTorch handles the underlying mathematical tensor computations for fast local sentiment extraction, completely eliminating the need for paid, external API endpoints (like OpenAI).
+*   **`tiktoken`**: An extremely fast BPE tokeniser used to reliably ensure lengthy language blocks map efficiently into model memory constraints.
+*   **`scikit-learn`** & **`numpy`**: Drive the operations for Theme Extraction. Scikit-learn runs the TF-IDF (Term Frequency-Inverse Document Frequency) vectorizer, and NumPy processes the dense matrix array outputs to rapidly isolate the overall top 5 dominant conversational keywords.
+*   **`sumy`** & **`lxml`**: Sumy executes the LSA (Latent Semantic Analysis) summarization algorithm to distill extremely long citizen opinions into 1-2 core sentences. `lxml` acts as the high-speed parsing dependency vital for Sumy's text tree manipulation.
+*   **`vaderSentiment`**: Provides robust lexicon and rule-based sentiment scoring heuristically (utilized for rule-based overriding on Banglish slang phrases).
+*   **`pandas`** & **`joblib`**: Pandas provides structured `DataFrame` manipulation for evaluating massive batches of opinions comprehensively in memory. `joblib` is leveraged to cache and optimize the loading of vectorized models directly from disk, significantly lowering latency.

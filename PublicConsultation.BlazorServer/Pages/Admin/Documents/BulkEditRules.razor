@@ -1,0 +1,190 @@
+@page "/admin/documents/{Id:guid}/bulk-rules"
+@attribute [Authorize(Roles = "Admin,Official")]
+
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Core.Utilities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@inject ApplicationDbContext DbContext
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 mb-16">
+    <div class="d-flex justify-space-between align-center mb-6">
+        <div>
+            <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack"
+                OnClick="@(() => NavigationManager.NavigateTo($"/admin/documents/{Id}"))" Class="mb-2">
+                Back to Document
+            </MudButton>
+            <MudText Typo="Typo.h4">Bulk Edit Rules</MudText>
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">Edit all provisions simultaneously</MudText>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
+            Size="Size.Large" OnClick="SaveAllRules">
+            Save All Changes
+        </MudButton>
+    </div>
+
+    @if (_isLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudPaper Elevation="3" Class="pa-4">
+            <MudTable Items="@_rules" Hover="true" Breakpoint="Breakpoint.None" Dense="false" Striped="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh Style="width: 80px;">Order</MudTh>
+                    <MudTh Style="width: 120px;">Rule No</MudTh>
+                    <MudTh Style="width: 200px;">Topic / Title</MudTh>
+                    <MudTh>Existing Law / Provision</MudTh>
+                    <MudTh>Proposed Law / Provision</MudTh>
+                    <MudTh Style="width: 60px;"></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Order">
+                        <MudNumericField @bind-Value="context.DisplayOrder" Variant="Variant.Outlined" Margin="Margin.Dense"
+                            HideSpinButtons="true" />
+                    </MudTd>
+                    <MudTd DataLabel="Rule No">
+                        <MudTextField @bind-Value="context.RuleNumber" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                    </MudTd>
+                    <MudTd DataLabel="Topic">
+                        <MudTextField @bind-Value="context.SectionTitle" Variant="Variant.Outlined" Margin="Margin.Dense"
+                            Lines="2" />
+                    </MudTd>
+                    <MudTd DataLabel="Existing Law">
+                        <MudTextField @bind-Value="context.ExistingProvision" Variant="Variant.Outlined"
+                            Margin="Margin.Dense" Lines="4" />
+                    </MudTd>
+                    <MudTd DataLabel="Proposed Law">
+                        <MudTextField @bind-Value="context.ProposedProvision" Variant="Variant.Outlined"
+                            Margin="Margin.Dense" Lines="4" />
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                            OnClick="@(() => RemoveRule(context))" Title="Remove Rule" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            <div class="mt-4 d-flex justify-center align-center">
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Add"
+                    OnClick="() => AddNewRuleRows(1)">
+                    Add 1 Row
+                </MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.PlaylistAdd"
+                    OnClick="() => AddNewRuleRows(5)" Class="ml-2">
+                    Add 5 Rows
+                </MudButton>
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.PlaylistAdd"
+                    OnClick="() => AddNewRuleRows(10)" Class="ml-2">
+                    Add 10 Rows
+                </MudButton>
+            </div>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private bool _isLoading = true;
+    private List<Rule> _rules = new();
+    private List<Rule> _rulesToDelete = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRules();
+    }
+
+    private async Task LoadRules()
+    {
+        _isLoading = true;
+        _rulesToDelete.Clear();
+
+        // Load existing rules for the document, ordered by DisplayOrder
+        _rules = await DbContext.Rules
+        .Where(r => r.DraftDocumentId == Id)
+        .OrderBy(r => r.DisplayOrder)
+        .ToListAsync();
+
+        // Provide at least one blank row if none exist
+        if (!_rules.Any())
+        {
+            AddNewRuleRows(1);
+        }
+
+        _isLoading = false;
+    }
+
+    private void AddNewRuleRows(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            int nextOrder = _rules.Any() ? _rules.Max(r => r.DisplayOrder) + 1 : 1;
+            _rules.Add(new Rule
+                {
+                    Oid = Guid.NewGuid(), // Will be properly inserted as new
+                    DraftDocumentId = Id,
+                    DisplayOrder = nextOrder,
+                    RuleNumber = "",
+                    SectionTitle = "",
+                    ExistingProvision = "",
+                    ProposedProvision = ""
+                });
+        }
+    }
+
+    private void RemoveRule(Rule rule)
+    {
+        _rules.Remove(rule);
+
+        // If it's an existing rule in the database (not just added to the UI list), track for deletion
+        if (DbContext.Entry(rule).State != EntityState.Detached && DbContext.Entry(rule).State != EntityState.Added)
+        {
+            _rulesToDelete.Add(rule);
+        }
+    }
+
+    private async Task SaveAllRules()
+    {
+        try
+        {
+            // Remove any tracked entities that the user deleted in the UI
+            if (_rulesToDelete.Any())
+            {
+                DbContext.Rules.RemoveRange(_rulesToDelete);
+                _rulesToDelete.Clear();
+            }
+
+            foreach (var rule in _rules)
+            {
+                // Check if the rule is already tracked by EF Core
+                var existingRule = await DbContext.Rules.FindAsync(rule.Oid);
+
+                if (existingRule == null)
+                {
+                    // It's a new rule added via AddNewRuleRow
+                    await DbContext.Rules.AddAsync(rule);
+                }
+                else
+                {
+                    // Update properties of the tracked entity
+                    DbContext.Entry(existingRule).CurrentValues.SetValues(rule);
+                }
+            }
+
+            await DbContext.SaveChangesAsync();
+            Snackbar.Add("All rules saved successfully!", Severity.Success);
+
+            // Navigate back to document details
+            NavigationManager.NavigateTo($"/admin/documents/{Id}");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving rules: {ex.Message}", Severity.Error);
+        }
+    }
+}

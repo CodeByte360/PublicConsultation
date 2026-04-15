@@ -1,0 +1,272 @@
+@page "/consultation/{Id:guid}/bulk-opinions"
+@using PublicConsultation.Core.Entities
+@using PublicConsultation.Infrastructure.Data
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Authorization
+@inject ApplicationDbContext DbContext
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-16">
+    @if (_document == null)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <div class="d-flex justify-space-between align-center mb-4">
+            <div>
+                <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="@(() => NavigationManager.NavigateTo($"/consultation/{Id}"))" Class="mb-2">
+                    Back to Consultation
+                </MudButton>
+                <MudText Typo="Typo.h5">Provide Opinions (Bulk Mode) for: @_document.Title</MudText>
+            </div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send"
+                       Size="Size.Large" OnClick="SubmitAllOpinions" Disabled="_isSubmitting">
+                @(_isSubmitting ? "Submitting..." : "Submit All Opinions")
+            </MudButton>
+        </div>
+
+        <MudPaper Elevation="2" Class="pa-0 overflow-hidden">
+            <div class="d-flex bg-primary text-white pa-4">
+                <div style="flex: 1;" class="d-flex align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Gavel" Class="mr-2" />
+                    <MudText Typo="Typo.h6">Rules & Provisions</MudText>
+                </div>
+                <div style="flex: 1; border-left-color: rgba(255,255,255,0.3) !important;" class="d-flex align-center pl-4 border-l-2 border-solid">
+                    <MudIcon Icon="@Icons.Material.Filled.Comment" Class="mr-2" />
+                    <MudText Typo="Typo.h6">Your Opinions</MudText>
+                </div>
+            </div>
+
+            @foreach (var ruleDef in _ruleDefinitions)
+            {
+                <div class="d-flex border-b-2 border-solid border-gray-200 pa-4" style="background-color: @(_ruleDefinitions.IndexOf(ruleDef) % 2 == 0 ? "#ffffff" : "#fbfbfb")">
+                    
+                    <!-- Left Column: The Rule -->
+                    <div style="flex: 1; padding-right: 24px;">
+                        <MudText Typo="Typo.subtitle1" Color="Color.Primary" Class="fw-bold mb-2">
+                            Rule @ruleDef.Rule.RuleNumber: @ruleDef.Rule.SectionTitle
+                        </MudText>
+                        
+                        <div class="mb-3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-1">CURRENT LAW / EXISTING PROVISION</MudText>
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary" Style="white-space: pre-wrap; background-color: #f9f9f9; padding: 12px; border-radius: 4px; border-left: 3px solid #ccc;">
+                                @(string.IsNullOrWhiteSpace(ruleDef.Rule.ExistingProvision) ? "(No existing provision text provided)" : ruleDef.Rule.ExistingProvision)
+                            </MudText>
+                        </div>
+                        
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Success" Class="d-block mb-1 fw-bold">MODIFIED LAW / PROPOSED PROVISION</MudText>
+                            <MudText Typo="Typo.body1" Style="white-space: pre-wrap; background-color: #f0fdf4; padding: 12px; border-radius: 4px; border-left: 3px solid #4ade80;">
+                                @(string.IsNullOrWhiteSpace(ruleDef.Rule.ProposedProvision) ? "(No proposed provision text provided)" : ruleDef.Rule.ProposedProvision)
+                            </MudText>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: The Opinion -->
+                    <div style="flex: 1; padding-left: 24px;" class="border-l-2 border-solid border-gray-200 d-flex flex-column">
+                        @if (ruleDef.HasExistingOpinion)
+                        {
+                            <MudAlert Severity="Severity.Success" Dense="true" Class="mb-2">
+                                You have already submitted feedback. You can update it below.
+                            </MudAlert>
+                        }
+                        <MudTextField T="string" Label="@(ruleDef.HasExistingOpinion ? "Update your opinion" : "Enter your opinion for this rule")" 
+                                      Variant="Variant.Outlined" 
+                                      @bind-Value="ruleDef.NewOpinionText" Lines="10" 
+                                      Placeholder="Type your feedback, agreement, disagreement, or suggestions here..."
+                                      Class="flex-grow-1" />
+                    </div>
+                </div>
+            }
+
+            @if (!_ruleDefinitions.Any())
+            {
+                <div class="pa-8 text-center">
+                    <MudText Typo="Typo.body1" Color="Color.Secondary">No rules found for this document.</MudText>
+                </div>
+            }
+        </MudPaper>
+        
+        <div class="d-flex justify-end mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send"
+                       Size="Size.Large" OnClick="SubmitAllOpinions" Disabled="_isSubmitting">
+                @(_isSubmitting ? "Submitting..." : "Submit All Opinions")
+            </MudButton>
+        </div>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    
+    private DraftDocument? _document;
+    private Guid _currentUserId;
+    private bool _isAuthenticated;
+    private bool _isSubmitting;
+    
+    private List<RuleOpinionDefinition> _ruleDefinitions = new();
+
+    private class RuleOpinionDefinition
+    {
+        public Rule Rule { get; set; } = null!;
+        public bool HasExistingOpinion { get; set; }
+        public Guid? ExistingOpinionId { get; set; }
+        public string ExistingOpinionText { get; set; } = string.Empty;
+        public string NewOpinionText { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+
+        if (!_isAuthenticated)
+        {
+            Snackbar.Add("Please login to submit opinions.", Severity.Warning);
+            NavigationManager.NavigateTo($"/login?returnUrl=/consultation/{Id}/bulk-opinions");
+            return;
+        }
+
+        var userIdClaim = user.FindFirst("UserId");
+        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var uid))
+        {
+            _currentUserId = uid;
+        }
+
+        _document = await DbContext.DraftDocuments.FirstOrDefaultAsync(d => d.Oid == Id);
+        if (_document != null)
+        {
+            // Verify consultation is active
+            var isAdmin = user.IsInRole("Admin");
+            if (!isAdmin)
+            {
+                var isStarted = (_document.Status == "Published" || (_document.Status == "Draft" && _document.ConsultationStartDate <= DateTime.Now));
+                var isEnded = _document.ConsultationEndDate < DateTime.Now;
+
+                if (!isStarted || isEnded)
+                {
+                    Snackbar.Add("This consultation is not currently active.", Severity.Warning);
+                    NavigationManager.NavigateTo("/active-consultations");
+                    return;
+                }
+            }
+
+            var rules = await DbContext.Rules
+                .Where(r => r.DraftDocumentId == Id)
+                .OrderBy(r => r.DisplayOrder)
+                .ToListAsync();
+
+            var ruleIds = rules.Select(r => r.Oid).ToList();
+            
+            // Get all existing opinions for this user and these rules
+            var existingOpinions = await DbContext.Opinions
+                .Where(o => o.UserId == _currentUserId && ruleIds.Contains(o.RuleId))
+                .ToDictionaryAsync(o => o.RuleId, o => o);
+
+            _ruleDefinitions.Clear();
+            foreach (var rule in rules)
+            {
+                var hasOpinion = existingOpinions.TryGetValue(rule.Oid, out var opinion);
+                _ruleDefinitions.Add(new RuleOpinionDefinition
+                {
+                    Rule = rule,
+                    HasExistingOpinion = hasOpinion,
+                    ExistingOpinionId = hasOpinion ? opinion?.Oid : null,
+                    ExistingOpinionText = hasOpinion ? opinion?.OpinionText ?? "" : "",
+                    NewOpinionText = hasOpinion ? opinion?.OpinionText ?? "" : ""
+                });
+            }
+        }
+    }
+
+    private async Task SubmitAllOpinions()
+    {
+        try
+        {
+            _isSubmitting = true;
+            
+            var opinionsToAdd = new List<Opinion>();
+            var opinionsToUpdate = new List<Opinion>();
+            int processedCount = 0;
+            
+            foreach (var ruleDef in _ruleDefinitions)
+            {
+                var text = ruleDef.NewOpinionText?.Trim();
+                
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    if (ruleDef.HasExistingOpinion && ruleDef.ExistingOpinionId.HasValue)
+                    {
+                        // Check if text actually changed
+                        if (text != ruleDef.ExistingOpinionText)
+                        {
+                            var existing = await DbContext.Opinions.FindAsync(ruleDef.ExistingOpinionId.Value);
+                            if (existing != null)
+                            {
+                                existing.OpinionText = text;
+                                existing.CreatedDate = DateTime.UtcNow; // Update timestamp
+                                opinionsToUpdate.Add(existing);
+                                processedCount++;
+                            }
+                        }
+                    }
+                    else if (!ruleDef.HasExistingOpinion)
+                    {
+                        opinionsToAdd.Add(new Opinion
+                        {
+                            Oid = Guid.NewGuid(),
+                            UserId = _currentUserId,
+                            RuleId = ruleDef.Rule.Oid,
+                            OpinionText = text,
+                            CreatedDate = DateTime.UtcNow
+                        });
+                        processedCount++;
+                    }
+                }
+            }
+
+            if (opinionsToAdd.Any() || opinionsToUpdate.Any())
+            {
+                if (opinionsToAdd.Any())
+                {
+                    await DbContext.Opinions.AddRangeAsync(opinionsToAdd);
+                }
+                
+                if (opinionsToUpdate.Any())
+                {
+                    DbContext.Opinions.UpdateRange(opinionsToUpdate);
+                }
+                
+                await DbContext.SaveChangesAsync();
+                
+                Snackbar.Add($"Successfully processed {processedCount} opinion(s)!", Severity.Success);
+                
+                // Refresh data to show submitted state
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add("No new or modified opinions to submit.", Severity.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving opinions: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+}

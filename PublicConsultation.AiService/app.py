@@ -1,29 +1,78 @@
 from flask import Flask, request, jsonify
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from transformers import pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.lsa import LsaSummarizer
+import nltk
+import re
 
 app = Flask(__name__)
-analyzer = SentimentIntensityAnalyzer()
+
+# Initialize Multilingual Sentiment Analysis (DistilBERT)
+# This model is more stable and supports English, Bengali, and many others.
+sentiment_task = pipeline("sentiment-analysis", model="lxyuan/distilbert-base-multilingual-cased-sentiments-student")
+
+# Map model labels to professional sentiment names
+label_mapping = {
+    "positive": "Positive",
+    "neutral": "Neutral",
+    "negative": "Negative"
+}
+
+# Extend VADER lexicon for Romanized Bengali (Mixed Words)
+# This is now handled by the Multilingual Transformer above.
+
+# Initialize sumy resources (extractive summarization)
+try:
+    nltk.data.find('tokenizers/punkt')
+except LookupError:
+    nltk.download('punkt')
 
 def get_professional_score(text):
-    # VADER analysis
-    scores = analyzer.polarity_scores(text)
-    compound = scores['compound']
-    
-    # Professional thresholds
-    if compound >= 0.05:
-        sentiment = "Positive"
-        # Map -1..1 to 0..1 probability-ish score for UI consistency
-        probability = 0.5 + (compound / 2)
-    elif compound <= -0.05:
-        sentiment = "Negative"
-        probability = 0.5 + (abs(compound) / 2)
-    else:
-        sentiment = "Neutral"
-        probability = 0.0
+    # Perform Multilingual Transformer analysis
+    try:
+        lower_text = text.lower()
+        
+        # 1. First, check for explicit NEGATIVE phrases (multi-word overrides everything)
+        negation_phrases = r'\b(ekmot noi|ekmat noi|bhalo na|thik nai|sommot noi|sohomot noi|sotik noy|sotik na|dorkar nai)\b'
+        if re.search(negation_phrases, lower_text):
+            return "Negative", 0.9, -0.9
+            
+        # 2. Then check for strong single-word negatives 
+        # (Be careful here, 'na' might just be a filler, but we count it as negative if no positive phrases exist)
+        negation_words = r'\b(noi|manda|kharap|bhul|nai)\b'
+        if re.search(negation_words, lower_text):
+             return "Negative", 0.8, -0.8
+             
+        # 3. If no explicit negations, check for explicit POSITIVE phrases/words
+        positive_pattern = r'\b(bhalo|thik ache|sotik|sahomot|sommot|sohomot|dhonyobad|darun|shundor|valo|ekmot|ekmat)\b'
+        is_positive = re.search(positive_pattern, lower_text)
+        
+        # 4. Handle standalone 'na' loosely. If they said 'na' but also 'bhalo', we might want transformer to decide, 
+        # but usually 'bhalo na' is caught by step 1. If it's just 'na' and no positive word, it's negative.
+        if re.search(r'\b(na)\b', lower_text) and not is_positive:
+             return "Negative", 0.7, -0.7
+             
+        if is_positive:
+             return "Positive", 0.8, 0.8
 
-    return sentiment, probability, compound
+        prediction = sentiment_task(text)[0]
+        label = prediction['label']
+        probability = prediction['score']
+        
+        sentiment = label_mapping.get(label, "Neutral")
+        
+        # Approximate compound score for legacy batch sensitivity logic (-1 to 1)
+        compound = 0.0
+        if sentiment == "Positive": compound = probability
+        elif sentiment == "Negative": compound = -probability
+        
+        return sentiment, probability, compound
+    except Exception as e:
+        print(f"Error in sentiment analysis: {e}")
+        return "Neutral", 0.0, 0.0
 
 @app.route('/analyze_sentiment', methods=['POST'])
 def analyze_sentiment():
@@ -39,6 +88,28 @@ def analyze_sentiment():
         'sentiment': sentiment,
         'probability': float(prob)
     })
+
+@app.route('/summarize', methods=['POST'])
+def summarize():
+    content = request.json
+    text = content.get('text', '')
+    
+    if not text or len(text) < 20:
+        return jsonify({'summary': text})
+    
+    try:
+        parser = PlaintextParser.from_string(text, Tokenizer("english"))
+        summarizer = LsaSummarizer()
+        # Summarize to 1-2 most significant sentences
+        summary_sentences = summarizer(parser.document, 2)
+        summary = " ".join([str(sentence) for sentence in summary_sentences])
+        
+        if not summary:
+            summary = text[:200] + "..." if len(text) > 200 else text
+            
+        return jsonify({'summary': summary})
+    except Exception as e:
+        return jsonify({'summary': text[:200] + "...", 'error': str(e)})
 
 @app.route('/analyze_batch', methods=['POST'])
 def analyze_batch():
