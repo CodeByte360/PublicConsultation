@@ -222,11 +222,14 @@
     o.OpinionText.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ||
     (o.User?.FullNameEnglish?.Contains(_searchString, StringComparison.OrdinalIgnoreCase) ?? false));
 
-    private void OnDocumentChanged(Guid? id)
+    private async Task OnDocumentChanged(Guid? id)
     {
         DocumentId = id;
         NavigationManager.NavigateTo(id.HasValue ? $"/admin/opinions/{id}" : "/admin/opinions");
-        Task.Run(LoadOpinions).ContinueWith(_ => InvokeAsync(StateHasChanged));
+        _loading = true;
+        await LoadOpinions();
+        _loading = false;
+        StateHasChanged();
     }
 
     private Color GetSentimentColor(string? s)

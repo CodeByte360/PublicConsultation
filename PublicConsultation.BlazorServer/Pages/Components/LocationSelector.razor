@@ -48,15 +48,36 @@
     private Guid? _selectedDivisionId;
     private Guid? _selectedDistrictId;
 
+    private Guid? _previousPoliceStationId;
+
     protected override async Task OnInitializedAsync()
     {
-        _divisions = await LocationService.GetDivisionsAsync();
-
-        if (PoliceStationId.HasValue)
+        if (!_divisions.Any())
         {
-            await LoadInitialState(PoliceStationId.Value);
+            _divisions = await LocationService.GetDivisionsAsync();
         }
     }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (PoliceStationId != _previousPoliceStationId)
+        {
+            _previousPoliceStationId = PoliceStationId;
+            if (PoliceStationId.HasValue)
+            {
+                await LoadInitialState(PoliceStationId.Value);
+            }
+            else
+            {
+                _selectedDistrictId = null;
+                _selectedDivisionId = null;
+                _districts = new List<District>();
+                _stations = new List<PoliceStation>();
+            }
+            StateHasChanged();
+        }
+    }
+
 
     private async Task LoadInitialState(Guid psId)
     {

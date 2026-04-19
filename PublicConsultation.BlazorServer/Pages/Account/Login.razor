@@ -1,6 +1,11 @@
 @page "/login"
 @using Microsoft.AspNetCore.WebUtilities
+@using PublicConsultation.Core.Interfaces
+@using PublicConsultation.Core.Entities
 @inject NavigationManager NavigationManager
+@inject IAuthService AuthService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center mud-width-full"
     Style="min-height: 80vh;">
@@ -22,26 +27,67 @@
                 <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@ErrorMessage</MudAlert>
             }
 
-            <form action="/account/login" method="post">
-                <MudTextField T="string" Label="Email" Name="email" Required="true" InputType="InputType.Email"
-                    Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
-                    Class="mb-4" />
+            <MudTabs Elevation="0" Outlined="false" Centered="true" Color="Color.Primary" Class="mb-4">
+                <MudTabPanel Text="Email & Password" Icon="@Icons.Material.Filled.Login">
+                    <form action="/account/login" method="post" class="mt-4">
+                        <MudTextField T="string" Label="Email" Name="email" Required="true" InputType="InputType.Email"
+                            Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
+                            Class="mb-4" />
 
-                <MudTextField T="string" Label="Password" Name="password" Required="true" InputType="@_passwordInput"
-                    Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon"
-                    OnAdornmentClick="TogglePasswordVisibility" />
+                        <MudTextField T="string" Label="Password" Name="password" Required="true" InputType="@_passwordInput"
+                            Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@_passwordInputIcon"
+                            OnAdornmentClick="TogglePasswordVisibility" />
 
-                <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+                        <input type="hidden" name="returnUrl" value="@ReturnUrl" />
 
-                <div class="d-flex justify-space-between align-center mt-2">
-                    <MudCheckBox T="bool" Label="Remember me" Color="Color.Primary" Dense="true" Class="ml-n2">
-                    </MudCheckBox>
-                    <MudLink Href="#">Forgot password?</MudLink>
-                </div>
+                        <div class="d-flex justify-space-between align-center mt-2">
+                            <MudCheckBox T="bool" Label="Remember me" Color="Color.Primary" Dense="true" Class="ml-n2">
+                            </MudCheckBox>
+                            <MudLink Href="#">Forgot password?</MudLink>
+                        </div>
 
-                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
-                    Size="Size.Large" Class="mt-6 py-2" FullWidth="true" Elevation="2">Login</MudButton>
-            </form>
+                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                            Size="Size.Large" Class="mt-6 py-2" FullWidth="true" Elevation="2">Login</MudButton>
+                    </form>
+                </MudTabPanel>
+                <MudTabPanel Text="Biometric" Icon="@Icons.Material.Filled.Fingerprint">
+                    <div class="mt-4 d-flex flex-column align-center">
+                        @if (!_isEligible)
+                        {
+                            <MudTextField T="string" Label="Admin/Officer Email" @bind-Value="_biometricEmail"
+                                Variant="Variant.Outlined" Adornment="Adornment.Start"
+                                AdornmentIcon="@Icons.Material.Filled.AlternateEmail" FullWidth="true" Class="mb-4" />
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CheckEligibility"
+                                Disabled="_isChecking" FullWidth="true" Class="py-2">
+                                @(_isChecking ? "Checking..." : "Verify Identity")
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Class="mb-4 w-100">
+                                Identity Verified. Please scan your registered finger to login.
+                            </MudAlert>
+
+                            <PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture Label="Scan Finger"
+                                OnCaptured="OnFingerprintCaptured" />
+
+                            @if (_isMatching)
+                            {
+                                <div class="d-flex align-center mt-4">
+                                    <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true"
+                                        Class="mr-2" />
+                                    <MudText>Authenticating...</MudText>
+                                </div>
+                            }
+
+                            <div class="mt-4 w-100">
+                                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="ResetBiometric"
+                                    FullWidth="true">Use Different Account</MudButton>
+                            </div>
+                        }
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
         </MudCardContent>
         <MudCardActions Class="d-flex justify-center pb-4">
             <MudText Typo="Typo.body2">
@@ -51,6 +97,11 @@
         </MudCardActions>
     </MudCard>
 </MudContainer>
+
+<form id="biometricLoginForm" action="/account/login-biometric" method="post" style="display:none;">
+    <input type="hidden" name="email" value="@_biometricEmail" />
+    <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+</form>
 
 @code {
     [SupplyParameterFromQuery]
@@ -63,6 +114,12 @@
     private bool _passwordVisibility;
     private InputType _passwordInput = InputType.Password;
     private string _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    private string _biometricEmail = "";
+    private bool _isChecking;
+    private bool _isEligible;
+    private bool _isMatching;
+    private Biometric? _storedBiometric;
 
     private void TogglePasswordVisibility()
     {
@@ -80,6 +137,96 @@
         }
     }
 
+    private async Task CheckEligibility()
+    {
+        if (string.IsNullOrWhiteSpace(_biometricEmail))
+        {
+            Snackbar.Add("Please enter your email", Severity.Warning);
+            return;
+        }
+
+        _isChecking = true;
+        try
+        {
+            _storedBiometric = await AuthService.GetBiometricDataAsync(_biometricEmail);
+            if (_storedBiometric != null)
+            {
+                _isEligible = true;
+            }
+            else
+            {
+                Snackbar.Add("Biometric data not found or insufficient permissions.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error checking eligibility: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _isChecking = false;
+        }
+    }
+
+    private void ResetBiometric()
+    {
+        _isEligible = false;
+        _storedBiometric = null;
+    }
+
+    private async Task OnFingerprintCaptured(PublicConsultation.BlazorServer.Pages.Components.FingerprintCapture.FingerprintData
+    data)
+    {
+        if (string.IsNullOrEmpty(data.Template) || _storedBiometric == null) return;
+
+        _isMatching = true;
+        StateHasChanged();
+
+        try
+        {
+            // Try matching against all 4 fingers
+            var storedTemplates = new[] {
+_storedBiometric.LeftThumb,
+_storedBiometric.LeftIndex,
+_storedBiometric.RightThumb,
+_storedBiometric.RightIndex
+};
+
+            bool matched = false;
+            foreach (var stored in storedTemplates)
+            {
+                if (string.IsNullOrEmpty(stored)) continue;
+
+                var result = await JSRuntime.InvokeAsync<SecuGenMatchResult>("window.secugen.match", data.Template, stored);
+                if (result.Success && result.isMatch)
+                {
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (matched)
+            {
+                Snackbar.Add("Identity match successful. Logging in...", Severity.Success);
+                await Task.Delay(500);
+                await JSRuntime.InvokeVoidAsync("window.secugen.submitForm", "biometricLoginForm");
+            }
+            else
+            {
+                Snackbar.Add("Fingerprint did not match any registered record.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Authentication error: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _isMatching = false;
+            StateHasChanged();
+        }
+    }
+
     protected override void OnInitialized()
     {
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
@@ -87,5 +234,13 @@
         {
             ReturnUrl = returnUrl;
         }
+    }
+
+    public class SecuGenMatchResult
+    {
+        public bool Success { get; set; }
+        public int score { get; set; }
+        public bool isMatch { get; set; }
+        public string? error { get; set; }
     }
 }

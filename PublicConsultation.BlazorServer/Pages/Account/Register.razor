@@ -87,13 +87,14 @@
 
                     <MudItem xs="12" sm="6">
                         <MudTextField T="string" Label="Password" Required="true" RequiredError="Password is required!"
-                                      @bind-Value="registerModel.Password" InputType="InputType.Password" Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"/>
+                                      @bind-Value="registerModel.Password" InputType="@PasswordInput" Variant="Variant.Outlined" 
+                                      Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="TogglePasswordVisibility" />
                     </MudItem>
                     <MudItem xs="12" sm="6">
                         <MudTextField T="string" Label="Confirm Password" Required="true"
                                       RequiredError="Password Confirmation is required!" @bind-Value="registerModel.ConfirmPassword"
-                                      InputType="InputType.Password" Validation="@(new Func<string, IEnumerable<string>>(PasswordMatch))" 
-                                      Variant="Variant.Outlined" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.LockReset"/>
+                                      InputType="@PasswordInput" Validation="@(new Func<string, IEnumerable<string>>(PasswordMatch))" 
+                                      Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="TogglePasswordVisibility" />
                     </MudItem>
 
                     <MudItem xs="12" Class="mt-4">
@@ -156,6 +157,26 @@
     bool isOtpSent = false;
     bool isEmailVerified = false;
     string otpInput = "";
+
+    // Password visibility state
+    bool isShowPassword = false;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    void TogglePasswordVisibility()
+    {
+        isShowPassword = !isShowPassword;
+        if (isShowPassword)
+        {
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+        else
+        {
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+    }
 
     private IEnumerable<string> PasswordMatch(string arg)
     {
