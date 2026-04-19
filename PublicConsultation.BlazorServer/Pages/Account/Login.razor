@@ -209,7 +209,7 @@ _storedBiometric.RightIndex
             {
                 Snackbar.Add("Identity match successful. Logging in...", Severity.Success);
                 await Task.Delay(500);
-                await JSRuntime.InvokeVoidAsync("window.secugen.submitForm", "biometricLoginForm");
+                await JSRuntime.InvokeVoidAsync("window.biometricLogin_submitForm", "biometricLoginForm");
             }
             else
             {
