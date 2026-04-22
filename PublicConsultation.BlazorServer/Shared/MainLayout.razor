@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 <MudThemeProvider Theme="_theme" @bind-IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
@@ -148,6 +148,9 @@
         </MudContainer>
         <MainFooter />
     </MudMainContent>
+
+    <!-- Floating DPCS Chatbot Widget -->
+    <PublicConsultation.BlazorServer.Pages.Components.DpcsChatbot />
 </MudLayout>
 
 @using PublicConsultation.BlazorServer.Theme

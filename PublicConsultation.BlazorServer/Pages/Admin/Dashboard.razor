@@ -3,7 +3,7 @@
 @using PublicConsultation.Core.Entities
 @using PublicConsultation.Infrastructure.Data
 @using Microsoft.EntityFrameworkCore
-@inject ApplicationDbContext DbContext
+@inject IDbContextFactory<ApplicationDbContext> DbContextFactory
 @inject PublicConsultation.Core.Interfaces.IAiAnalysisService AiService
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
@@ -160,6 +160,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        using var DbContext = await DbContextFactory.CreateDbContextAsync();
+        
         _totalUsers = await DbContext.UserAccounts.CountAsync(u => u.Role.Name == "Citizen");
         _totalDocs = await DbContext.DraftDocuments.CountAsync();
         _totalOpinions = await DbContext.Opinions.CountAsync();
@@ -190,7 +192,6 @@
         _sentimentData[2] = allOpinions.Count(o => (o.Sentiment ?? "").StartsWith("Mixed"));
         _sentimentData[3] = allOpinions.Count(o => string.IsNullOrEmpty(o.Sentiment) || o.Sentiment.StartsWith("Neutral"));
 
-        // Calculate Controversial Sections
         // Calculate Controversial Sections
         _controversialSections = await DbContext.Opinions
             .GroupBy(o => new { o.RuleId, o.Rule.DraftDocumentId, o.Rule.SectionTitle, DocTitle = o.Rule.DraftDocument.Title })

@@ -1,0 +1,491 @@
+@using PublicConsultation.Core.Interfaces
+@using PublicConsultation.Core.DTOs
+@inject IChatbotService ChatbotService
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
+
+<!-- Floating Chat Bubble -->
+@if (!_isOpen)
+{
+    <div class="dpcs-chat-bubble" @onclick="ToggleChat">
+        <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Large" Style="color: white;" />
+        <div class="dpcs-chat-bubble-pulse"></div>
+    </div>
+}
+
+<!-- Chat Window -->
+@if (_isOpen)
+{
+    <div class="dpcs-chat-overlay" @onclick="ToggleChat"></div>
+    <div class="dpcs-chat-window @(_isOpen ? "dpcs-chat-open" : "")">
+        <!-- Header -->
+        <div class="dpcs-chat-header">
+            <div class="d-flex align-center gap-3">
+                <MudAvatar Size="Size.Small" Style="background: rgba(255,255,255,0.2);">
+                    <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Style="color: white;" />
+                </MudAvatar>
+                <div>
+                    <div style="font-weight: 600; font-size: 0.95rem;">DPCS Assistant</div>
+                    <div style="font-size: 0.7rem; opacity: 0.8;">
+                        <span class="dpcs-status-dot"></span> Online — Ask me anything
+                    </div>
+                </div>
+            </div>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                Style="color: white;" OnClick="ToggleChat" />
+        </div>
+
+        <!-- Messages Area -->
+        <div class="dpcs-chat-messages" id="dpcs-chat-scroll">
+            <!-- Welcome Message -->
+            <div class="dpcs-msg-bot">
+                <div class="dpcs-msg-avatar">
+                    <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Style="color: var(--mud-palette-primary);" />
+                </div>
+                <div class="dpcs-msg-content dpcs-msg-bot-bubble">
+                    <div style="font-weight: 600; margin-bottom: 4px;">👋 Welcome to DPCS Assistant!</div>
+                    <div>I can help you find information about draft documents, rules, public opinions, ministries, and consultation statuses. What would you like to know?</div>
+                    <div class="dpcs-msg-time">AI Assistant • Now</div>
+                </div>
+            </div>
+
+            <!-- Suggested Questions -->
+            @if (!_messages.Any() && _suggestedQuestions.Any())
+            {
+                <div class="dpcs-suggestions">
+                    @foreach (var q in _suggestedQuestions)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                            OnClick="@(() => AskSuggested(q))" Style="font-size: 0.75rem; cursor: pointer;">
+                            @q
+                        </MudChip>
+                    }
+                </div>
+            }
+
+            <!-- Chat Messages -->
+            @foreach (var msg in _messages)
+            {
+                @if (msg.IsUser)
+                {
+                    <div class="dpcs-msg-user">
+                        <div class="dpcs-msg-content dpcs-msg-user-bubble">
+                            @msg.Text
+                            <div class="dpcs-msg-time" style="color: rgba(255,255,255,0.7);">You • @msg.Timestamp.ToString("hh:mm tt")</div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="dpcs-msg-bot">
+                        <div class="dpcs-msg-avatar">
+                            <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Style="color: var(--mud-palette-primary);" />
+                        </div>
+                        <div class="dpcs-msg-content dpcs-msg-bot-bubble">
+                            @((MarkupString)FormatResponse(msg.Text))
+
+                            @if (msg.Sources.Any())
+                            {
+                                <div class="dpcs-sources">
+                                    <span style="font-size: 0.7rem; opacity: 0.6;">📎 Sources:</span>
+                                    @foreach (var src in msg.Sources.Take(3))
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Info"
+                                            Style="font-size: 0.65rem; height: 20px;">
+                                            @src.EntityType: @src.Title
+                                        </MudChip>
+                                    }
+                                </div>
+                            }
+
+                            @if (msg.Intent != null)
+                            {
+                                <div style="margin-top: 4px;">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Default"
+                                        Style="font-size: 0.6rem; height: 18px; opacity: 0.5;">
+                                        @msg.Intent • @($"{msg.Confidence:P0}")
+                                    </MudChip>
+                                </div>
+                            }
+
+                            <div class="dpcs-msg-time">AI Assistant • @msg.Timestamp.ToString("hh:mm tt")</div>
+                        </div>
+                    </div>
+
+                    @if (msg.SuggestedQuestions.Any())
+                    {
+                        <div class="dpcs-suggestions" style="padding-left: 44px;">
+                            @foreach (var sq in msg.SuggestedQuestions)
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                                    OnClick="@(() => AskSuggested(sq))" Style="font-size: 0.7rem; cursor: pointer;">
+                                    @sq
+                                </MudChip>
+                            }
+                        </div>
+                    }
+                }
+            }
+
+            <!-- Typing Indicator -->
+            @if (_isTyping)
+            {
+                <div class="dpcs-msg-bot">
+                    <div class="dpcs-msg-avatar">
+                        <MudIcon Icon="@Icons.Material.Filled.SmartToy" Size="Size.Small" Style="color: var(--mud-palette-primary);" />
+                    </div>
+                    <div class="dpcs-msg-content dpcs-msg-bot-bubble">
+                        <div class="dpcs-typing">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Input Area -->
+        <div class="dpcs-chat-input">
+            <MudTextField T="string" @bind-Value="_currentInput" Placeholder="Ask about DPCS..."
+                Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
+                OnKeyDown="HandleKeyDown" Adornment="Adornment.End"
+                AdornmentIcon="@Icons.Material.Filled.Send" AdornmentColor="Color.Primary"
+                OnAdornmentClick="SendMessage" Style="font-size: 0.85rem;" />
+        </div>
+    </div>
+}
+
+<style>
+    /* Floating Bubble */
+    .dpcs-chat-bubble {
+        position: fixed;
+        bottom: 28px;
+        right: 28px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #1E3C72, #2A5298);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 6px 24px rgba(30, 60, 114, 0.5);
+        z-index: 9999;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .dpcs-chat-bubble:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 32px rgba(30, 60, 114, 0.65);
+    }
+    .dpcs-chat-bubble-pulse {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: rgba(42, 82, 152, 0.4);
+        animation: dpcs-pulse 2s infinite;
+    }
+    @@keyframes dpcs-pulse {
+        0% { transform: scale(1); opacity: 0.6; }
+        100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    /* Overlay */
+    .dpcs-chat-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.2);
+        z-index: 9998;
+    }
+
+    /* Chat Window */
+    .dpcs-chat-window {
+        position: fixed;
+        bottom: 28px;
+        right: 28px;
+        width: 400px;
+        max-width: calc(100vw - 32px);
+        height: 580px;
+        max-height: calc(100vh - 60px);
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 10000;
+        background: var(--mud-palette-surface);
+        box-shadow: 0 12px 48px rgba(0,0,0,0.25);
+        animation: dpcs-slide-up 0.3s ease;
+    }
+    @@keyframes dpcs-slide-up {
+        from { opacity: 0; transform: translateY(20px) scale(0.95); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Header */
+    .dpcs-chat-header {
+        background: linear-gradient(135deg, #1E3C72, #2A5298);
+        color: white;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+    }
+    .dpcs-status-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #4CAF50;
+        margin-right: 4px;
+        animation: dpcs-blink 1.5s infinite;
+    }
+    @@keyframes dpcs-blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+
+    /* Messages */
+    .dpcs-chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        scroll-behavior: smooth;
+    }
+    .dpcs-msg-bot {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+    }
+    .dpcs-msg-user {
+        display: flex;
+        justify-content: flex-end;
+    }
+    .dpcs-msg-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: rgba(30, 60, 114, 0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .dpcs-msg-content {
+        max-width: 85%;
+        padding: 10px 14px;
+        border-radius: 16px;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+    .dpcs-msg-bot-bubble {
+        background: var(--mud-palette-background-grey);
+        border-bottom-left-radius: 4px;
+    }
+    .dpcs-msg-user-bubble {
+        background: linear-gradient(135deg, #1E3C72, #2A5298);
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+    .dpcs-msg-time {
+        font-size: 0.65rem;
+        opacity: 0.5;
+        margin-top: 6px;
+    }
+    .dpcs-sources {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+        margin-top: 8px;
+        padding-top: 6px;
+        border-top: 1px solid rgba(0,0,0,0.06);
+    }
+
+    /* Suggestions */
+    .dpcs-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 4px 12px 4px 44px;
+    }
+
+    /* Typing Indicator */
+    .dpcs-typing {
+        display: flex;
+        gap: 4px;
+        padding: 4px 0;
+    }
+    .dpcs-typing span {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--mud-palette-primary);
+        opacity: 0.4;
+        animation: dpcs-bounce 1.4s infinite ease-in-out both;
+    }
+    .dpcs-typing span:nth-child(1) { animation-delay: -0.32s; }
+    .dpcs-typing span:nth-child(2) { animation-delay: -0.16s; }
+    @@keyframes dpcs-bounce {
+        0%, 80%, 100% { transform: scale(0.6); }
+        40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Input */
+    .dpcs-chat-input {
+        padding: 10px 12px 14px;
+        border-top: 1px solid rgba(0,0,0,0.08);
+        flex-shrink: 0;
+        background: var(--mud-palette-surface);
+    }
+
+    /* Responsive */
+    @@media (max-width: 480px) {
+        .dpcs-chat-window {
+            bottom: 0;
+            right: 0;
+            width: 100vw;
+            height: 100vh;
+            max-height: 100vh;
+            border-radius: 0;
+        }
+    }
+</style>
+
+@code {
+    private bool _isOpen = false;
+    private bool _isTyping = false;
+    private string _currentInput = "";
+    private string _sessionId = Guid.NewGuid().ToString("N")[..16];
+    private Guid? _userId;
+    private List<ChatMsg> _messages = new();
+    private List<string> _suggestedQuestions = new();
+    private System.Timers.Timer? _scrollTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var claim = user.FindFirst("UserId");
+                if (claim != null && Guid.TryParse(claim.Value, out var uid))
+                    _userId = uid;
+            }
+            _suggestedQuestions = await ChatbotService.GetSuggestedQuestionsAsync();
+        }
+        catch { /* non-critical */ }
+    }
+
+    private void ToggleChat()
+    {
+        _isOpen = !_isOpen;
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_currentInput))
+            await SendMessage();
+    }
+
+    private async Task AskSuggested(string question)
+    {
+        _currentInput = question;
+        await SendMessage();
+    }
+
+    private async Task SendMessage()
+    {
+        var text = _currentInput?.Trim();
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        _messages.Add(new ChatMsg { Text = text, IsUser = true, Timestamp = DateTime.Now });
+        _currentInput = "";
+        _isTyping = true;
+        StateHasChanged();
+
+        // Auto-scroll after render
+        ScheduleScroll();
+
+        try
+        {
+            var result = await ChatbotService.AskAsync(new ChatbotQuestionDto
+            {
+                Question = text,
+                SessionId = _sessionId,
+                UserId = _userId
+            });
+
+            _messages.Add(new ChatMsg
+            {
+                Text = result.Answer,
+                IsUser = false,
+                Timestamp = DateTime.Now,
+                Sources = result.Sources,
+                Intent = result.Intent,
+                Confidence = result.Confidence,
+                SuggestedQuestions = result.SuggestedQuestions
+            });
+        }
+        catch (Exception ex)
+        {
+            _messages.Add(new ChatMsg
+            {
+                Text = "Sorry, I encountered an error processing your question. Please try again.",
+                IsUser = false,
+                Timestamp = DateTime.Now
+            });
+        }
+        finally
+        {
+            _isTyping = false;
+            StateHasChanged();
+            ScheduleScroll();
+        }
+    }
+
+    private void ScheduleScroll()
+    {
+        _scrollTimer?.Dispose();
+        _scrollTimer = new System.Timers.Timer(100);
+        _scrollTimer.Elapsed += async (s, e) =>
+        {
+            _scrollTimer?.Dispose();
+            await InvokeAsync(StateHasChanged);
+        };
+        _scrollTimer.Start();
+    }
+
+    private string FormatResponse(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        // Convert markdown-like bold
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        // Convert newlines
+        text = text.Replace("\n", "<br/>");
+        // Convert markdown table-like content (simple)
+        text = text.Replace("| ", "").Replace(" |", "");
+        return text;
+    }
+
+    public void Dispose()
+    {
+        _scrollTimer?.Dispose();
+    }
+
+    private class ChatMsg
+    {
+        public string Text { get; set; } = "";
+        public bool IsUser { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.Now;
+        public List<ChatSourceReference> Sources { get; set; } = new();
+        public string? Intent { get; set; }
+        public double Confidence { get; set; }
+        public List<string> SuggestedQuestions { get; set; } = new();
+    }
+}

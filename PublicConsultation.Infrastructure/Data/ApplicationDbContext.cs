@@ -23,6 +23,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<Opinion> Opinions { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<Biometric> Biometrics { get; set; }
+    public DbSet<ChatbotConversation> ChatbotConversations { get; set; }
+    public DbSet<ChatbotKnowledgeIndex> ChatbotKnowledgeIndex { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
