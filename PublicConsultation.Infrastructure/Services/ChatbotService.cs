@@ -159,7 +159,24 @@ public class ChatbotService : IChatbotService
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var keywords = ExtractKeywords(question);
-        var docs = await db.DraftDocuments.Include(d => d.Ministry).AsNoTracking().ToListAsync();
+        
+        var query = db.DraftDocuments.Include(d => d.Ministry).AsNoTracking().AsQueryable();
+        
+        var lowerQuestion = question.ToLower();
+        var now = DateTime.UtcNow;
+        bool wantsActive = lowerQuestion.Contains("open") || lowerQuestion.Contains("active") || lowerQuestion.Contains("running") || lowerQuestion.Contains("চলমান") || lowerQuestion.Contains("সক্রিয়");
+        bool wantsClosed = lowerQuestion.Contains("closed") || lowerQuestion.Contains("expired") || lowerQuestion.Contains("বন্ধ");
+
+        if (wantsActive)
+        {
+            query = query.Where(d => d.Status == "Published" && d.ConsultationEndDate > now);
+        }
+        else if (wantsClosed)
+        {
+            query = query.Where(d => d.Status == "Closed" || d.ConsultationEndDate <= now);
+        }
+
+        var docs = await query.ToListAsync();
 
         var scored = docs.Select(d => new
         {
@@ -410,8 +427,16 @@ public class ChatbotService : IChatbotService
 
         // Search DraftDocuments
         var docs = await db.DraftDocuments.AsNoTracking().ToListAsync();
+        var lowerQuestion = question.ToLower();
+        var now = DateTime.UtcNow;
+        bool wantsActive = lowerQuestion.Contains("open") || lowerQuestion.Contains("active") || lowerQuestion.Contains("running") || lowerQuestion.Contains("চলমান") || lowerQuestion.Contains("সক্রিয়");
+        bool wantsClosed = lowerQuestion.Contains("closed") || lowerQuestion.Contains("expired") || lowerQuestion.Contains("বন্ধ");
+
         foreach (var d in docs)
         {
+            if (wantsActive && (d.Status != "Published" || d.ConsultationEndDate <= now)) continue;
+            if (wantsClosed && (d.Status != "Closed" && d.ConsultationEndDate > now)) continue;
+
             int score = keywords.Sum(k =>
                 (d.Title.Contains(k, StringComparison.OrdinalIgnoreCase) ? 3 : 0) +
                 ((d.Description ?? "").Contains(k, StringComparison.OrdinalIgnoreCase) ? 2 : 0) +

@@ -145,7 +145,7 @@
 
         <!-- Input Area -->
         <div class="dpcs-chat-input">
-            <MudTextField T="string" @bind-Value="_currentInput" Placeholder="Ask about DPCS..."
+            <MudTextField @ref="_textField" T="string" @bind-Value="_currentInput" Placeholder="Ask about DPCS..."
                 Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true"
                 OnKeyDown="HandleKeyDown" Adornment="Adornment.End"
                 AdornmentIcon="@Icons.Material.Filled.Send" AdornmentColor="Color.Primary"
@@ -359,6 +359,7 @@
     private bool _isOpen = false;
     private bool _isTyping = false;
     private string _currentInput = "";
+    private MudTextField<string>? _textField;
     private string _sessionId = Guid.NewGuid().ToString("N")[..16];
     private Guid? _userId;
     private List<ChatMsg> _messages = new();
@@ -405,9 +406,14 @@
         if (string.IsNullOrWhiteSpace(text)) return;
 
         _messages.Add(new ChatMsg { Text = text, IsUser = true, Timestamp = DateTime.Now });
-        _currentInput = "";
+        _currentInput = string.Empty;
+        if (_textField != null)
+        {
+            await _textField.Clear();
+        }
         _isTyping = true;
         StateHasChanged();
+        await Task.Delay(10); // Allow UI to update and clear the input field
 
         // Auto-scroll after render
         ScheduleScroll();
