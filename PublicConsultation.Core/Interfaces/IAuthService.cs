@@ -13,5 +13,6 @@ public interface IAuthService
     Task<bool> IsEmailUniqueAsync(string email, Guid? excludeUserId = null);
     Task<bool> IsPhoneUniqueAsync(string phone, Guid? excludeUserId = null);
     Task<bool> IsNidUniqueAsync(long nid, Guid? excludeUserId = null);
+    Task<Biometric?> GetBiometricDataAsync(string email);
     Task LogoutAsync();
 }

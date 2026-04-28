@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @using Microsoft.AspNetCore.Components.Web
 @namespace PublicConsultation.BlazorServer.Pages
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
@@ -36,6 +36,17 @@
     <script src="_framework/blazor.server.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="js/secugen.js?v=@DateTime.Now.Ticks"></script>
+    <script>
+        // Global helper to ensure form submission works even if external scripts are cached
+        window.biometricLogin_submitForm = function (id) {
+            var form = document.getElementById(id);
+            if (form) {
+                form.submit();
+            } else {
+                console.error("Form with id " + id + " not found.");
+            }
+        }
+    </script>
 </body>
 
 </html>

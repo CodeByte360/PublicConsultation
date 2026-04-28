@@ -98,6 +98,25 @@ public class AuthService : IAuthService
         return !await _context.UserAccounts.AnyAsync(u => u.NIDNumber == nid && u.Oid != excludeUserId);
     }
 
+    public async Task<Biometric?> GetBiometricDataAsync(string email)
+    {
+        if (_context == null || _context.UserAccounts == null) return null;
+
+        var user = await _context.UserAccounts
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.Email == email);
+
+        if (user == null) return null;
+
+        // Check if user is Admin or Official
+        if (user.Role?.Name != "Admin" && user.Role?.Name != "Official")
+            return null;
+
+        if (_context.Biometrics == null) return null;
+
+        return await _context.Biometrics.FirstOrDefaultAsync(b => b.UserAccountId == user.Oid);
+    }
+
     public Task LogoutAsync()
     {
         // For cookie auth or server-side session, this might do more.

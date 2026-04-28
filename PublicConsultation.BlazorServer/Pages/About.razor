@@ -1,0 +1,106 @@
+@page "/about"
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mb-8">
+    <MudPaper Elevation="0" Class="pa-0 rounded-lg overflow-hidden mb-8">
+        <div style="position: relative;">
+            <MudImage Src="images/about_banner.png" Alt="About DPCS" Fluid="true" Style="width:100%; max-height: 400px; object-fit: cover;" />
+            <div style="position: absolute; bottom: 0; left:0; right: 0; background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);" class="pa-8">
+                <MudText Typo="Typo.h3" Style="color: white; font-weight: 700;">About Digital Public Consultation System (DPCS)</MudText>
+                <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.8);">Empowering citizens to shape the future of national legislation.</MudText>
+            </div>
+        </div>
+    </MudPaper>
+
+    <MudGrid>
+        <MudItem xs="12" md="7">
+            <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-4" Style="font-weight: 600;">Our Mission</MudText>
+            <MudText Typo="Typo.body1" Class="mb-6" Style="font-size: 1.1rem; line-height: 1.7;">
+                The Digital Public Consultation System (DPCS) is a transformative initiative by the Government to modernize the legislative process. 
+                Our goal is to create a transparent, inclusive, and efficient platform where every citizen's voice can be heard before new laws 
+                and regulations are finalized.
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mb-6" Style="font-size: 1.1rem; line-height: 1.7;">
+                By leveraging cutting-edge technology and AI, we bridge the gap between policy-makers and the public, ensuring that 
+                legislative decisions are informed by the diverse perspectives of our society.
+            </MudText>
+
+            <MudText Typo="Typo.h5" Class="mt-8 mb-4" Style="font-weight: 600;">How It Works</MudText>
+            <div class="d-flex flex-column gap-4">
+                <div class="d-flex align-start flex-row gap-4 mb-4">
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">1</MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">Draft Publication</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Ministries publish draft bills and rules for public review.</MudText>
+                    </div>
+                </div>
+                <div class="d-flex align-start flex-row gap-4 mb-4">
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">2</MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">Public Feedback</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Citizens submit their opinions, suggestions, and concerns directly on the draft.</MudText>
+                    </div>
+                </div>
+                <div class="d-flex align-start flex-row gap-4 mb-4">
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">3</MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">AI Synthesis</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Advanced AI analyzes thousands of comments to find key trends and sentiments.</MudText>
+                    </div>
+                </div>
+                <div class="d-flex align-start flex-row gap-4 mb-4">
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Medium">4</MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Style="font-weight: 700;">Better Legislation</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Policy makers refine the draft based on informed public insights.</MudText>
+                    </div>
+                </div>
+            </div>
+        </MudItem>
+
+        <MudItem xs="12" md="5">
+            <MudCard Elevation="4" Class="pa-4 mud-background-gray rounded-lg">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h5" Align="Align.Center" Style="font-weight: 700;">Key Features</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudList T="string">
+                        <MudListItem Icon="@Icons.Material.Filled.Search">
+                            <MudText Typo="Typo.body2"><b>Easy Access:</b> Browse and search draft documents by category or ministry.</MudText>
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.CheckCircle">
+                            <MudText Typo="Typo.body2"><b>Verified Identity:</b> Secure biometric-based identity verification for citizens.</MudText>
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.AutoFixHigh">
+                            <MudText Typo="Typo.body2"><b>AI Analysis:</b> Automated sentiment analysis and topic extraction from opinions.</MudText>
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.History">
+                            <MudText Typo="Typo.body2"><b>Transparency:</b> Every change and activity is logged and auditable.</MudText>
+                        </MudListItem>
+                        <MudListItem Icon="@Icons.Material.Filled.PieChart">
+                            <MudText Typo="Typo.body2"><b>Data Visualization:</b> Real-time charts showing public sentiment on bills.</MudText>
+                        </MudListItem>
+                    </MudList>
+                </MudCardContent>
+            </MudCard>
+
+            <div class="mt-8 d-flex flex-column align-center pa-6 rounded-lg" style="border: 2px dashed var(--mud-palette-primary); background-color: rgba(var(--mud-palette-primary-rgb), 0.05);">
+                <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Primary" Style="font-size: 3rem;" Class="mb-3" />
+                <MudText Typo="Typo.h6" Align="Align.Center"><b>Secure & Private</b></MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary" Class="mt-2">
+                    Your personal information is protected with industry-standard encryption and government-grade security protocols.
+                </MudText>
+            </div>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Elevation="0" Class="mt-12 pa-12 rounded-xl text-center mud-theme-primary">
+        <MudText Typo="Typo.h4" Style="font-weight: 700;">Ready to participate?</MudText>
+        <MudText Typo="Typo.h6" Class="mt-2 mb-8">Join thousands of citizens making an impact.</MudText>
+        <div class="d-flex justify-center gap-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" Size="Size.Large" Href="/register" Style="min-width: 200px;">Register Now</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Size="Size.Large" Href="/active-consultations" Style="min-width: 200px;">Browse Drafts</MudButton>
+        </div>
+    </MudPaper>
+</MudContainer>

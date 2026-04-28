@@ -55,6 +55,8 @@ builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IMinistryService, 
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IFileService, PublicConsultation.Infrastructure.Services.FileService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IBiometricService, PublicConsultation.Infrastructure.Services.BiometricService>();
 builder.Services.AddScoped<PublicConsultation.Core.Interfaces.ILocationService, PublicConsultation.Infrastructure.Services.LocationService>();
+builder.Services.AddScoped<PublicConsultation.Core.Interfaces.IChatbotService, PublicConsultation.Infrastructure.Services.ChatbotService>();
+builder.Services.AddHostedService<PublicConsultation.Infrastructure.Services.ChatbotTrainingHostedService>();
 builder.Services.AddHostedService<PublicConsultation.Infrastructure.Services.ConsultationStatusHostedService>();
 builder.Services.AddControllers();
 

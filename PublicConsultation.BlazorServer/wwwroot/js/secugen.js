@@ -96,5 +96,13 @@ window.secugen = {
                 error: msg
             };
         }
+    },
+    submitForm: function (id) {
+        var form = document.getElementById(id);
+        if (form) {
+            form.submit();
+            return true;
+        }
+        return false;
     }
 };

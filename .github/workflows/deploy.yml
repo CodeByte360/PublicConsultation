@@ -1,0 +1,95 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - "**.md"
+      - ".gitignore"
+      - ".gitattributes"
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+env:
+  SERVER_HOST: 192.144.80.202
+  APP_DIR: /opt/public-consultation
+  DOMAIN: staging-terasupport-rdp.arcapps.org
+
+jobs:
+  # ==========================================
+  # Build & Test
+  # ==========================================
+  build:
+    name: Build & Verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build solution
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test --configuration Release --no-build --verbosity normal
+        continue-on-error: true
+
+  # ==========================================
+  # Deploy to Server
+  # ==========================================
+  deploy:
+    name: Deploy to Production
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            cd ${{ env.APP_DIR }}
+            
+            echo "=== Pulling latest code ==="
+            git pull origin master
+            
+            echo "=== Building Docker image ==="
+            docker compose build --no-cache blazor-app
+            
+            echo "=== Restarting services ==="
+            docker compose up -d --force-recreate blazor-app
+            
+            echo "=== Waiting for health check ==="
+            sleep 15
+            
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Deployment successful! HTTP $HTTP_CODE"
+            else
+              echo "⚠️ Health check returned HTTP $HTTP_CODE"
+              docker compose logs blazor-app --tail=30
+            fi
+            
+            echo "=== Cleaning up ==="
+            docker image prune -f
+            
+            echo "✅ Deploy complete: https://${{ env.DOMAIN }}"
+
+      - name: Verify deployment
+        run: |
+          sleep 5
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" https://${{ env.DOMAIN }} || echo "000")
+          echo "Site status: HTTP $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::warning::Site returned HTTP $HTTP_CODE"
+          fi
